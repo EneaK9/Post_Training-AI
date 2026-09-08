@@ -30,6 +30,9 @@ uv run oai jobs worker                                      # long-running caden
 
 ## Connecting a real Meta account (do not skip steps)
 
+The Graph API version is pinned in `config.meta.api_version` (currently `v26.0`). Bumping it is a
+deliberate change: run `pytest -m contract` against the sandbox first (`tests/contract/`).
+
 Real money only after all of the following:
 
 1. **Simulator gate.** `make test-slow` passes: Loop A finds tier 2 at least as often as random

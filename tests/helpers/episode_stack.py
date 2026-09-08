@@ -1,4 +1,5 @@
 """Shared episode test stack: seeded DB, fake Meta client, generation service, ship helpers."""
+
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -6,29 +7,22 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from outlier_ai.core.embeddings import HashEmbedder
-from outlier_ai.core.errors import SafetyError
-from outlier_ai.core.settings import Settings
 from outlier_ai.core.storage import LocalStorage
-from outlier_ai.episodes.budget import assert_can_ship, check_budget
-from outlier_ai.episodes.controller import can_start_next_batch, tick_episode
+from outlier_ai.episodes.controller import tick_episode
 from outlier_ai.generation.backends.fake_backend import FakeBackend
 from outlier_ai.generation.service import GenerationService
 from outlier_ai.generation.verifier import HeuristicVerifier, load_card_refs
 from outlier_ai.images import get_image_backend
-from outlier_ai.jobs.handlers import run_sync_comments, run_sync_insights
-from outlier_ai.meta.errors import MetaAuthError
-from outlier_ai.meta.factory import client_for_account, default_latent
+from outlier_ai.jobs.handlers import run_sync_insights
+from outlier_ai.meta.factory import default_latent
 from outlier_ai.meta.fake import FakeMetaClient
-from outlier_ai.meta.ship import ship_batch, ship_trajectory
+from outlier_ai.meta.ship import ship_batch
 from outlier_ai.models.briefs import Brief
-from outlier_ai.models.episodes import Batch, SearchEpisode
-from outlier_ai.models.meta import AdAccount, Comment, DailyInsight
-from outlier_ai.models.ops import AuditLog, KillSwitch
-from outlier_ai.models.signals import Signal
-from outlier_ai.models.trajectories import Outcome, Render, Review, Trajectory
+from outlier_ai.models.episodes import SearchEpisode
+from outlier_ai.models.meta import AdAccount
+from outlier_ai.models.trajectories import Review
 from outlier_ai.outlier.recompute import recompute_all
 from outlier_ai.reward.cold import HeuristicColdRewardModel
-from outlier_ai.synthetic.latent import AdTruth
 from outlier_ai.synthetic.seed import FAKE_ACCOUNT_ID, seed
 from outlier_schemas.config import AppConfig
 from outlier_schemas.enums import BackendKind, ImageMode
@@ -41,6 +35,7 @@ START = date(2026, 9, 1)
 
 def dt(d: date) -> datetime:
     return datetime(d.year, d.month, d.day, 12, tzinfo=UTC)
+
 
 class Stack:
     def __init__(
@@ -159,4 +154,3 @@ async def _count(session, model, *where):
     return int(
         (await session.execute(select(func.count()).select_from(model).where(*where))).scalar_one()
     )
-

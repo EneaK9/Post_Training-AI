@@ -316,6 +316,7 @@ async def ship_approved_ideas(
     """Ship every `run`-labeled idea in this episode that has not shipped yet."""
     from outlier_ai.core.errors import SafetyError
     from outlier_ai.core.storage import get_storage
+    from outlier_ai.episodes.budget import kill_switch_open
     from outlier_ai.episodes.controller import TickReport, ship_approved
     from outlier_ai.meta.factory import client_for_account
     from outlier_ai.models.meta import AdAccount
@@ -328,6 +329,9 @@ async def ship_approved_ideas(
         client = await client_for_account(db, account, cfg, require_shippable=True)
     except SafetyError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
+    if not await kill_switch_open(db):
+        # per-idea refusals are tolerated below, but a closed kill switch is a hard no
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "kill switch: shipping is disabled")
     report = TickReport(episode_id=ep.id)
     shipped = await ship_approved(
         db,

@@ -64,3 +64,21 @@ advantage transform, clipped sequence ratios, KL to a reference refreshed only a
 `--allow-rm-reward`). Install GPU dependencies with `uv sync --package outlier-trainer --extra train`.
 The Model screen exposes the same actions to researchers: Launch run (dry / smoke / full), Run eval,
 Train reward model, plus the gold-gap badge.
+
+## Status of the simulator gate (honest reading)
+
+`oai experiments loop-a-vs-random --briefs 8 --seeds 1,2,3 --history 250 --cap 2000 --max-days 110`
+(24 runs per arm, 2026-09-08):
+
+| arm | found rate | mean batches | mean spend | days to outlier |
+|---|---|---|---|---|
+| loop_a | 0.08 | 3.3 | $1687 | 23 |
+| random | 0.08 | 3.3 | $1700 | 31 |
+
+The slow test (`tests/slow/test_loop_a_vs_random.py`) passes because Loop A is not worse, but
+there is no separation yet. The likely reason is the synthetic history: with the default latent
+model, roughly 1 in 120 seeded trajectories is tier 2+, so the archive the fake "archive" policy
+conditions on holds one or two outliers across four briefs and carries almost no signal. Levers,
+in order: seed more outlier-dense history (or a heavier-tailed latent), give the fake archive
+policy the niche projection the latent actually rewards, and raise the per-run budget so more
+than ~8 ideas ship. Do not treat the gate as passed until the intervals separate.

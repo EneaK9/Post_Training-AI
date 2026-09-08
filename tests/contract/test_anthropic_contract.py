@@ -4,6 +4,7 @@ grammar. Runs only with ANTHROPIC_API_KEY set; costs a few cents."""
 from __future__ import annotations
 
 import os
+import uuid
 
 import pytest
 
@@ -21,8 +22,10 @@ async def test_generate_one_idea_parses(app_config: AppConfig):
     from outlier_ai.generation.verifier import CardRef
 
     cards = [
-        CardRef(id=__import__("uuid").uuid4(), slug="contrarian", kind="strategy", name="Contrarian"),
-        CardRef(id=__import__("uuid").uuid4(), slug="ugc-testimonial", kind="style", name="UGC"),
+        CardRef(
+            id=uuid.uuid4(), slug="contrarian", name="Contrarian", kind="strategy", definition=""
+        ),
+        CardRef(id=uuid.uuid4(), slug="ugc-testimonial", name="UGC", kind="style", definition=""),
     ]
     prompt = (
         "Propose exactly 1 feed ad idea for a protein bar brief. Active cards: contrarian, "
@@ -31,7 +34,8 @@ async def test_generate_one_idea_parses(app_config: AppConfig):
         "<copy>primary_text: ...\nheadline: ...\ndescription: ...\ncta: SHOP_NOW</copy>\n"
         "<visual_brief>...</visual_brief>\n</idea>"
     )
-    backend = AnthropicBackend(model=app_config.generation.anthropic_model, max_tokens=1500)
+    backend = AnthropicBackend(app_config.generation.anthropic_model)
     outputs = await backend.generate(prompt, 1)
-    parsed = parse_ideas(outputs[0].text, {c.slug: c for c in cards})
-    assert parsed and parsed[0].format_ok, parsed
+    result = parse_ideas(outputs[0].text, cards_by_slug={c.slug: c.id for c in cards})
+    ideas = getattr(result, "ideas", result)
+    assert ideas and ideas[0].format_ok, result

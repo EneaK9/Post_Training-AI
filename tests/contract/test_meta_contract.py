@@ -39,7 +39,7 @@ def _client(cfg: AppConfig):
 async def test_account_info_matches_pinned_api_version(app_config: AppConfig):
     info = await _client(app_config).get_account_info()
     assert info.account_id.endswith(ACCOUNT.removeprefix("act_"))  # type: ignore[union-attr]
-    assert info.currency and info.attribution_setting
+    assert info.name and info.currency
 
 
 @needs_sandbox
