@@ -246,7 +246,7 @@ async def test_training_eval_feedback_api(
     db_session: AsyncSession, app_config: AppConfig, tmp_path, monkeypatch
 ):
     monkeypatch.setenv("STORAGE_BACKEND", "local")
-    monkeypatch.setenv("LOCAL_STORAGE_ROOT", str(tmp_path))
+    monkeypatch.setenv("LOCAL_STORAGE_DIR", str(tmp_path))
     from outlier_ai.core.settings import get_settings
 
     get_settings.cache_clear()  # type: ignore[attr-defined]

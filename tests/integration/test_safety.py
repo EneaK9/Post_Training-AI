@@ -51,11 +51,19 @@ async def _non_draft(session: AsyncSession, episode_id) -> int:
 
 
 async def test_kill_switch_blocks_api_and_job_level(
-    db_session: AsyncSession, app_config: AppConfig, tmp_path
+    db_session: AsyncSession, app_config: AppConfig, tmp_path, monkeypatch
 ):
+    # the API ships through get_storage(); point it at the same directory the stack renders into
+    monkeypatch.setenv("STORAGE_BACKEND", "local")
+    monkeypatch.setenv("LOCAL_STORAGE_DIR", str(tmp_path))
+    from outlier_ai.core.settings import get_settings
+
+    get_settings.cache_clear()  # type: ignore[attr-defined]
     st = await Stack(db_session, app_config, tmp_path).setup(n=20, s=7)
     result = await st.generate_and_approve(k=2, renders=1, now=dt(START))
     assert result.batch_id is not None and len(result.queued) >= 1
+    episode_id = st.episode.id  # captured: rollback below expires ORM objects
+    first_trajectory = result.queued[0].trajectory.id
     operator = await _operator(db_session)
 
     off = await operator.put(
@@ -64,10 +72,10 @@ async def test_kill_switch_blocks_api_and_job_level(
     assert off.status_code == 200 and off.json()["shipping_enabled"] is False
 
     # API level: the ship endpoint is refused and nothing moves
-    r = await operator.post(f"/api/episodes/{st.episode.id}/ship")
+    r = await operator.post(f"/api/episodes/{episode_id}/ship")
     assert r.status_code == 403, r.text
     assert "kill switch" in r.json()["detail"]
-    assert await _non_draft(db_session, st.episode.id) == 0
+    assert await _non_draft(db_session, episode_id) == 0
 
     # job level: ship_batch records refusals, tick_episode ships nothing
     results = await ship_batch(
@@ -81,16 +89,18 @@ async def test_kill_switch_blocks_api_and_job_level(
     )
     await db_session.commit()
     assert results and all(not r.shipped_render_ids for r in results)
-    assert await _non_draft(db_session, st.episode.id) == 0
+    assert await _non_draft(db_session, episode_id) == 0
     refused = (
         await db_session.execute(
             select(func.count(AuditLog.id)).where(AuditLog.action == "trajectory.ship_refused")
         )
     ).scalar_one()
     assert refused >= 1
+    episode = await db_session.get(SearchEpisode, episode_id)
+    assert episode is not None
     report = await tick_episode(
         db_session,
-        st.episode,
+        episode,
         client=st.client,
         cfg=app_config,
         now=dt(START),
@@ -98,24 +108,27 @@ async def test_kill_switch_blocks_api_and_job_level(
     )
     await db_session.commit()
     assert report is not None
-    assert await _non_draft(db_session, st.episode.id) == 0
+    assert await _non_draft(db_session, episode_id) == 0
     with pytest.raises(SafetyError, match="kill switch"):
         await ship_trajectory(
             db_session,
-            result.queued[0].trajectory.id,
+            first_trajectory,
             client=st.client,
             storage=st.storage,
             cfg=app_config,
             actor="test",
             now=dt(START),
         )
+    # the refused call left the trajectory row locked in this transaction; release it before the
+    # API (a separate connection) tries to ship the same rows
+    await db_session.rollback()
 
     # flipping it back on lets the same batch ship
     on = await operator.put("/api/meta/kill_switch", json={"shipping_enabled": True})
     assert on.status_code == 200
-    r = await operator.post(f"/api/episodes/{st.episode.id}/ship")
+    r = await operator.post(f"/api/episodes/{episode_id}/ship")
     assert r.status_code == 200, r.text
-    assert await _non_draft(db_session, st.episode.id) >= 1
+    assert await _non_draft(db_session, episode_id) >= 1
 
 
 async def test_concurrent_ship_calls_respect_the_episode_cap(
