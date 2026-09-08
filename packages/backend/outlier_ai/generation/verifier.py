@@ -235,3 +235,23 @@ async def load_few_shot(session: AsyncSession, n: int, cards: Sequence[CardRef])
         if len(out) >= n:
             break
     return out
+
+
+class ClassifierVerifier:
+    """v2: the trained nearest-centroid classifier (see jobs.feedback) behind the same protocol."""
+
+    def __init__(self, model, embedder, cards: Sequence[CardRef], version: str) -> None:
+        self.model = model
+        self.embedder = embedder
+        self.by_slug = {c.slug: c for c in cards}
+        self.version = version
+
+    async def tag(self, angle: str, copy: AdCopy, visual_brief: str) -> VerifierResult:
+        text = "\n".join([angle, copy.primary_text, copy.headline, visual_brief])
+        slugs = [s for s in self.model.predict(self.embedder.embed([text]))[0] if s in self.by_slug]
+        return VerifierResult(
+            card_ids=[self.by_slug[s].id for s in slugs],
+            card_slugs=slugs,
+            version=self.version,
+            source=TagSource.verifier,
+        )

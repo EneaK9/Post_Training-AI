@@ -152,6 +152,8 @@ class RLConfig(_Cfg):
     lora: LoraConfig = Field(default_factory=LoraConfig)
     guards: GuardsConfig = Field(default_factory=GuardsConfig)
     min_tier2_trajectories_to_start: int = Field(default=50, ge=1)
+    min_positives_to_train: int = Field(default=50, ge=1)
+    feedback_weekday: int = Field(default=6, ge=0, le=6)  # Sunday: weekly feedback jobs
 
 
 class ActionTypes(_Cfg):

@@ -53,6 +53,65 @@ async def run_handler(session: AsyncSession, job: Job, cfg: AppConfig) -> dict[s
                 for s in await recompute_all(session, cfg)
             ]
         }
+    if job.kind == "train":
+        from outlier_ai.jobs.training import run_training_job
+
+        return await run_training_job(session, payload, cfg=cfg)
+    if job.kind == "eval":
+        from outlier_ai.core.storage import get_storage
+        from outlier_ai.eval.harness import run_eval
+        from outlier_ai.models.ml import EvalRun
+        from outlier_schemas.enums import EvalKind
+
+        result = await run_eval(
+            session,
+            cfg=cfg,
+            storage=get_storage(),
+            systems=list(payload.get("systems") or ["loop_a_fake", "random_fake"]),
+            n_briefs=int(payload.get("n_briefs", 3)),
+            budget_cap=float(payload.get("budget_cap", 2000.0)),
+            created_by=str(payload.get("created_by", "worker")),
+            kind=EvalKind(payload.get("kind", "online")),
+            seed=int(payload.get("seed", 0)),
+            max_days=int(payload.get("max_days", 120)),
+        )
+        if payload.get("eval_id"):
+            # the API created a placeholder row; point it at the real run
+            placeholder = await session.get(EvalRun, UUID(payload["eval_id"]))
+            if placeholder is not None and placeholder.id != result.eval_id:
+                placeholder.status = "completed"
+                placeholder.summary = {**result.summary(), "run_id": str(result.eval_id)}
+        return result.summary()
+    if job.kind == "export_snapshot":
+        from outlier_ai.archive.export import export_snapshot
+        from outlier_ai.core.storage import get_storage
+
+        snap = await export_snapshot(session, cfg=cfg, storage=get_storage())
+        return snap.__dict__
+    if job.kind == "suggest_relations":
+        from outlier_ai.jobs.feedback import suggest_relations
+
+        return {"suggested": len(await suggest_relations(session))}
+    if job.kind in ("retrain_verifier", "retrain_rm"):
+        from outlier_ai.core.embeddings import get_embedder
+        from outlier_ai.core.settings import get_settings
+        from outlier_ai.core.storage import get_storage
+
+        s = get_settings()
+        embedder = get_embedder(
+            s, dims=cfg.archive.embedding_dims, model_name=cfg.archive.embedding_model
+        )
+        if job.kind == "retrain_verifier":
+            from outlier_ai.jobs.feedback import retrain_verifier
+
+            vv = await retrain_verifier(session, cfg=cfg, embedder=embedder, storage=get_storage(s))
+            return {"version": vv.version if vv else None}
+        from outlier_ai.jobs.training import pause_if_gold_gap_tripped
+        from outlier_ai.reward.train import train_reward_model
+
+        res = await train_reward_model(session, cfg=cfg, embedder=embedder, storage=get_storage(s))
+        gg = await pause_if_gold_gap_tripped(session, cfg)
+        return {"version": res.version if res else None, "gold_gap": gg}
     raise ValueError(f"unknown job kind {job.kind}")
 
 
@@ -136,6 +195,11 @@ async def schedule_daily(
     if now.hour >= cfg.meta.comments_sync_hour_utc:
         await enqueue(session, "sync_comments", key=f"daily:{day}", payload={})
         keys.append("sync_comments")
+    if now.weekday() == cfg.rl.feedback_weekday and now.hour >= cfg.meta.insights_sync_hour_utc:
+        week = now.strftime("%G-W%V")
+        for kind in ("suggest_relations", "retrain_verifier", "retrain_rm", "export_snapshot"):
+            await enqueue(session, kind, key=f"weekly:{week}", payload={})
+            keys.append(kind)
     # the controller also runs every 30 minutes for review polling
     slot = now.replace(minute=(now.minute // 30) * 30, second=0, microsecond=0).isoformat()
     await enqueue(session, "episode_tick", key=f"slot:{slot}", payload={})

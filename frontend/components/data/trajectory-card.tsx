@@ -71,7 +71,7 @@ export function TrajectoryCard({ trajectory, id, expanded: initialExpanded = fal
       </div>
       <footer className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <button onClick={() => setExpanded((e) => !e)} className="text-xs text-accent hover:underline" data-testid="toggle-expand">{expanded ? "collapse" : "expand"}</button>
-        {showActions && <Actions t={t} />}
+        {showActions && <TrajectoryActions t={t} />}
       </footer>
       {expanded && <Expanded t={full} />}
     </article>
@@ -182,7 +182,7 @@ function Expanded({ t }: { t: TrajectoryDetail | TrajectoryOut }) {
   );
 }
 
-function Actions({ t }: { t: TrajectoryOut }) {
+export function TrajectoryActions({ t }: { t: TrajectoryOut }) {
   const review = useReview();
   const editCopy = useEditCopy();
   const cards = useCards();

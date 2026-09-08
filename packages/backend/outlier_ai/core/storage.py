@@ -21,6 +21,7 @@ class Storage(Protocol):
     def get(self, key: str) -> bytes: ...
     def exists(self, key: str) -> bool: ...
     def public_url(self, key: str) -> str: ...
+    def list(self, prefix: str) -> list[str]: ...
 
 
 def key_from_uri(uri: str) -> str:
@@ -54,6 +55,13 @@ class LocalStorage:
 
     def public_url(self, key: str) -> str:
         return self._path(key).as_uri()
+
+    def list(self, prefix: str) -> list[str]:
+        base = self._path(prefix)
+        if not base.exists():
+            return []
+        root = self.root.resolve()
+        return sorted(str(f.relative_to(root)) for f in base.rglob("*") if f.is_file())
 
 
 class S3Storage:
@@ -95,6 +103,13 @@ class S3Storage:
         return self.client.generate_presigned_url(
             "get_object", Params={"Bucket": self.bucket, "Key": key}, ExpiresIn=3600
         )
+
+    def list(self, prefix: str) -> list[str]:
+        keys: list[str] = []
+        paginator = self.client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+            keys += [o["Key"] for o in page.get("Contents", [])]
+        return keys
 
 
 def get_storage(settings: Settings | None = None) -> Storage:

@@ -54,6 +54,7 @@ reportMissingImports = "warning"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["tests"]
 markers = [
   "integration: requires Postgres (docker compose up)",
   "slow: simulator experiments and trainer smoke runs",

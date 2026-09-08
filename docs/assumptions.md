@@ -67,3 +67,36 @@ of those parts is reconstructed here from the v4 summaries. Every item is tagged
 | API model | Anthropic Claude behind provider-neutral interfaces. |
 | Database | Postgres 18 + pgvector 0.8 on Neon (direct endpoint), same image locally. |
 | Safety | `DRY_RUN=true` default, global kill switch, per-account daily hard cap, real client only constructed when all three allow. |
+
+## Phase 6 decisions (reward model, Loop B, eval, feedback)
+
+- **Screening failure is tier 0.** Spec 7.2 says the outcome reward is null only for ideas never
+  shipped. A shipped idea whose screening window completed without a pass, with no render still
+  live, therefore gets `outlier_tier = 0` (no `outcomes` row, since outcomes are scale-derived).
+  Ideas still pending review, still screening, or at scale without a full window stay null.
+  Consequence: DPO has tier 0 negatives, the novelty rule's "tier 0 with the same combination"
+  clause has data, and the Loop A stats count screening failures as measured.
+- **Gold gap trips on divergence in either direction.** `gap = (recent_score − reference_score) −
+  (recent_rate − reference_rate)`; a gap above `reward_model.gold_gap_threshold` pauses queued
+  training runs and refuses new launches. A proxy that holds steady while real outcomes collapse
+  is treated the same as a proxy that rises while outcomes stay flat: both mean the reward model
+  is over-scoring what ships. Loop A is never paused by it.
+- **Eval verdicts below 20 briefs are "no verdict".** `success` is null, with a note, rather than
+  false. `false` is reserved for runs with 20+ briefs whose intervals overlap.
+- **Blind labels are random letters per run**, stored on `eval_arms.blind_label`; the system name
+  is revealed on the Model screen only once the run is completed.
+- **The trainer is a subprocess** (`python -m outlier_trainer.run`) launched by the `train` job.
+  It reads a Parquet snapshot and writes `run.json`; it never touches the database. GPU
+  dependencies live behind the `train` extra and are imported inside each stage, so `--dry`
+  works everywhere and CI exercises the data path without a GPU.
+- **On-policy GRPO is gated twice** (trainer flag and API validation) because its reward is
+  reward-model shaping, exactly the failure mode section 6 warns about.
+- **Verifier v2 is a nearest-centroid classifier** on the same hashed text embedding the archive
+  uses, trained only on `wrong_cards` corrections and expert-tagged imports (holdout excluded). It
+  replaces the LLM verifier automatically once `verifier.classifier_min_labels` labels exist.
+- **Suggested relations** come from card pairs whose tier 2+ co-occurrence is at least 1.5x what
+  the members' individual frequencies predict, with at least two observations; created as
+  `card_relations(source=suggested, status=pending)` when an outlier lands and weekly.
+- **Prompts are stored on the batch** (`batches.prompt_trace.prompt`) so the export ships the
+  exact prompt the idea was generated from; older trajectories are re-rendered as of their
+  creation time and marked as such.

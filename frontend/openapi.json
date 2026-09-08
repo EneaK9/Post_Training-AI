@@ -2221,6 +2221,184 @@
         }
       }
     },
+    "/api/episodes/{episode_id}/step": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Step Episode",
+        "description": "One Loop A decision cycle: generate the next batch and, unless approval is manual, approve\nthe top ideas by rm_score and ship them through the account's client.",
+        "operationId": "step_episode_api_episodes__episode_id__step_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "approval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "manual",
+              "title": "Approval"
+            }
+          },
+          {
+            "name": "k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "K"
+            }
+          },
+          {
+            "name": "no_llm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "No Llm"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/episodes/{episode_id}/simulate": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Simulate Episode",
+        "description": "Fake accounts only: advance the fake clock, sync insights, run the controller.",
+        "operationId": "simulate_episode_api_episodes__episode_id__simulate_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/episodes/{episode_id}/ship": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Ship Approved Ideas",
+        "description": "Ship every `run`-labeled idea in this episode that has not shipped yet.",
+        "operationId": "ship_approved_ideas_api_episodes__episode_id__ship_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/generate": {
       "post": {
         "tags": [
@@ -2846,6 +3024,81 @@
         }
       }
     },
+    "/api/eval/systems": {
+      "get": {
+        "tags": [
+          "eval"
+        ],
+        "summary": "Systems",
+        "operationId": "systems_api_eval_systems_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "type": "object",
+                  "title": "Response Systems Api Eval Systems Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eval": {
+      "get": {
+        "tags": [
+          "eval"
+        ],
+        "summary": "List Evals",
+        "operationId": "list_evals_api_eval_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvalRunOut"
+                  },
+                  "title": "Response List Evals Api Eval Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/eval/launch": {
       "post": {
         "tags": [
@@ -2853,12 +3106,34 @@
         ],
         "summary": "Launch",
         "operationId": "launch_api_eval_launch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalLaunchIn"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "501": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -2885,11 +3160,56 @@
           }
         ],
         "responses": {
-          "501": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eval/{eval_id}/refresh": {
+      "post": {
+        "tags": [
+          "eval"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_eval__eval_id__refresh_post",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Eval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRunOut"
+                }
               }
             }
           },
@@ -3053,6 +3373,451 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/loop_a": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Loop A Stats",
+        "description": "Ideas generated, novelty rejected, shipped, screening pass rate, tier 2 rate per backend,\nper combination, per typicality label. Answers whether \"rare\" ideas actually hit more.",
+        "operationId": "loop_a_stats_api_stats_loop_a_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Loop A Stats Api Stats Loop A Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/reviews": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Review Stats",
+        "operationId": "review_stats_api_stats_reviews_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Review Stats Api Stats Reviews Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/verifier": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Verifier Stats",
+        "description": "Agreement between written and verified tags plus, per card, how often experts corrected\nthe verifier (the confusion the Model screen shows).",
+        "operationId": "verifier_stats_api_stats_verifier_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Verifier Stats Api Stats Verifier Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/reward_model": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Reward Model Stats",
+        "operationId": "reward_model_stats_api_stats_reward_model_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Reward Model Stats Api Stats Reward Model Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/architecture": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Architecture",
+        "description": "Nodes and edges for the live architecture diagram; every node names its config path.",
+        "operationId": "architecture_api_stats_architecture_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Architecture Api Stats Architecture Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/gold_gap": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Gold Gap Stats",
+        "description": "Proxy-vs-real drift of the active reward model (spec section 6). Tripped pauses Loop B.",
+        "operationId": "gold_gap_stats_api_stats_gold_gap_get",
+        "parameters": [
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Window"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldGapOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/runs": {
+      "get": {
+        "tags": [
+          "training"
+        ],
+        "summary": "List Runs",
+        "operationId": "list_runs_api_training_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrainingRunOut"
+                  },
+                  "title": "Response List Runs Api Training Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Launch",
+        "operationId": "launch_api_training_runs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainingRunIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_api_training_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/runs/{run_id}/stop": {
+      "post": {
+        "tags": [
+          "training"
+        ],
+        "summary": "Stop Run",
+        "operationId": "stop_run_api_training_runs__run_id__stop_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback/suggest_relations": {
+      "post": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Suggest",
+        "operationId": "suggest_api_feedback_suggest_relations_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback/retrain_verifier": {
+      "post": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Retrain Verifier Now",
+        "operationId": "retrain_verifier_now_api_feedback_retrain_verifier_post",
+        "parameters": [
+          {
+            "name": "min_labels",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Labels"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback/retrain_rm": {
+      "post": {
+        "tags": [
+          "feedback"
+        ],
+        "summary": "Retrain Rm",
+        "operationId": "retrain_rm_api_feedback_retrain_rm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RMTrainIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RMTrainOut"
                 }
               }
             }
@@ -4861,6 +5626,282 @@
         ],
         "title": "EpisodeOut"
       },
+      "EvalArmOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "system": {
+            "type": "string",
+            "title": "System"
+          },
+          "blind_label": {
+            "type": "string",
+            "title": "Blind Label"
+          },
+          "n_briefs": {
+            "type": "integer",
+            "title": "N Briefs"
+          },
+          "tier2_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier2 Rate"
+          },
+          "ci_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci Low"
+          },
+          "ci_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci High"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "system",
+          "blind_label",
+          "n_briefs",
+          "tier2_rate",
+          "ci_low",
+          "ci_high",
+          "details"
+        ],
+        "title": "EvalArmOut"
+      },
+      "EvalLaunchIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^(online|loop_b_vs_loop_a)$",
+            "title": "Kind",
+            "default": "online"
+          },
+          "systems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Systems"
+          },
+          "n_briefs": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "N Briefs",
+            "default": 3
+          },
+          "budget_cap": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Budget Cap",
+            "default": 2000.0
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 0
+          },
+          "max_days": {
+            "type": "integer",
+            "maximum": 400.0,
+            "minimum": 1.0,
+            "title": "Max Days",
+            "default": 120
+          },
+          "inline": {
+            "type": "boolean",
+            "title": "Inline",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "EvalLaunchIn"
+      },
+      "EvalRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "holdout_brief_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Holdout Brief Ids"
+          },
+          "attribution_setting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution Setting"
+          },
+          "config_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Hash"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "arms": {
+            "items": {
+              "$ref": "#/components/schemas/EvalArmOut"
+            },
+            "type": "array",
+            "title": "Arms"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "holdout_brief_ids",
+          "attribution_setting",
+          "config_hash",
+          "summary",
+          "created_by",
+          "created_at",
+          "finished_at",
+          "arms",
+          "job_id"
+        ],
+        "title": "EvalRunOut"
+      },
+      "FeedbackOut": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "count",
+          "version",
+          "metrics",
+          "reason"
+        ],
+        "title": "FeedbackOut"
+      },
       "GenerateIn": {
         "properties": {
           "brief_id": {
@@ -5051,6 +6092,91 @@
           "verifier_version"
         ],
         "title": "GeneratedIdeaOut"
+      },
+      "GoldGapOut": {
+        "properties": {
+          "reference_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Score"
+          },
+          "reference_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Rate"
+          },
+          "recent_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Score"
+          },
+          "recent_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Rate"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap"
+          },
+          "tripped": {
+            "type": "boolean",
+            "title": "Tripped",
+            "default": false
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reference_score",
+          "reference_rate",
+          "recent_score",
+          "recent_rate",
+          "gap",
+          "tripped",
+          "detail",
+          "threshold"
+        ],
+        "title": "GoldGapOut"
       },
       "HTTPValidationError": {
         "properties": {
@@ -5409,6 +6535,101 @@
           "trace"
         ],
         "title": "PromptOut"
+      },
+      "RMTrainIn": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(rm_cold|rm_outcome)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "activate": {
+            "type": "boolean",
+            "title": "Activate",
+            "default": true
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "RMTrainIn"
+      },
+      "RMTrainOut": {
+        "properties": {
+          "trained": {
+            "type": "boolean",
+            "title": "Trained"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "n_rows": {
+            "type": "integer",
+            "title": "N Rows",
+            "default": 0
+          },
+          "n_positive": {
+            "type": "integer",
+            "title": "N Positive",
+            "default": 0
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trained",
+          "version",
+          "kind",
+          "n_rows",
+          "n_positive",
+          "metrics",
+          "reason"
+        ],
+        "title": "RMTrainOut"
       },
       "RelationCreate": {
         "properties": {
@@ -6001,6 +7222,208 @@
           "created_at"
         ],
         "title": "SignalOut"
+      },
+      "TrainingRunIn": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "pattern": "^(rft|dpo|grpo_offpolicy|grpo_onpolicy)$",
+            "title": "Stage"
+          },
+          "base_model": {
+            "type": "string",
+            "title": "Base Model",
+            "default": "Qwen/Qwen3-8B"
+          },
+          "adapter_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adapter From"
+          },
+          "smoke": {
+            "type": "boolean",
+            "title": "Smoke",
+            "default": false
+          },
+          "dry": {
+            "type": "boolean",
+            "title": "Dry",
+            "default": false
+          },
+          "simulator": {
+            "type": "boolean",
+            "title": "Simulator",
+            "default": false
+          },
+          "allow_rm_reward": {
+            "type": "boolean",
+            "title": "Allow Rm Reward",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage"
+        ],
+        "title": "TrainingRunIn"
+      },
+      "TrainingRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "config_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Hash"
+          },
+          "snapshot_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Hash"
+          },
+          "rm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rm Version"
+          },
+          "verifier_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verifier Version"
+          },
+          "base_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model"
+          },
+          "checkpoint_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkpoint Uri"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "stop_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Reason"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "stage",
+          "status",
+          "config_hash",
+          "snapshot_hash",
+          "rm_version",
+          "verifier_version",
+          "base_model",
+          "checkpoint_uri",
+          "metrics",
+          "stop_reason",
+          "created_by",
+          "created_at",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "TrainingRunOut"
       },
       "TrajectoryDetail": {
         "properties": {

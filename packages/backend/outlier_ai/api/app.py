@@ -20,12 +20,15 @@ from outlier_ai.api.routers import (
     config,
     episodes,
     eval,
+    feedback,
     generate,
     imports,
     meta,
     reviews,
     search,
     signals,
+    stats,
+    training,
     trajectories,
 )
 from outlier_ai.core import db as dbmod
@@ -58,6 +61,9 @@ ROUTERS = [
     audit.router,
     eval.router,
     imports.router,
+    stats.router,
+    training.router,
+    feedback.router,
 ]
 
 

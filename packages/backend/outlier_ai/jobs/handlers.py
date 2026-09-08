@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from outlier_ai.core.audit import record_audit
 from outlier_ai.core.crypto import hash_identity
 from outlier_ai.core.settings import Settings
+from outlier_ai.core.storage import get_storage
 from outlier_ai.episodes.controller import tick_episode
 from outlier_ai.generation.backends.base import JudgeBackend
 from outlier_ai.generation.preship import check_policy_keywords
@@ -312,6 +313,8 @@ async def run_episode_tick(
         except Exception as e:
             out.append({"episode_id": str(ep.id), "error": str(e)})
             continue
-        report = await tick_episode(session, ep, client=client, cfg=cfg, now=now)
+        report = await tick_episode(
+            session, ep, client=client, cfg=cfg, now=now, storage=get_storage(), settings=settings
+        )
         out.append({"episode_id": str(ep.id), "status": report.status, "events": report.events})
     return out

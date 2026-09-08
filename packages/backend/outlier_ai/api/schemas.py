@@ -565,3 +565,113 @@ class KillSwitchOut(Resp):
 class KillSwitchIn(BaseModel):
     shipping_enabled: bool
     reason: str = ""
+
+
+# ---- Phase 6: snapshots, reward model training, training runs, eval, feedback --------------
+class SnapshotOut(Out):
+    id: UUID
+    hash: str
+    uri: str
+    n_trajectories: int
+    n_tier2: int
+    config_hash: str | None
+    created_at: datetime
+
+
+class RMTrainIn(BaseModel):
+    kind: str | None = Field(default=None, pattern=r"^(rm_cold|rm_outcome)$")
+    activate: bool = True
+    seed: int = 0
+
+
+class RMTrainOut(Resp):
+    trained: bool
+    version: str | None = None
+    kind: str | None = None
+    n_rows: int = 0
+    n_positive: int = 0
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    reason: str | None = None
+
+
+class GoldGapOut(Resp):
+    reference_score: float | None = None
+    reference_rate: float | None = None
+    recent_score: float | None = None
+    recent_rate: float | None = None
+    gap: float | None = None
+    tripped: bool = False
+    detail: str = ""
+    threshold: float
+
+
+class TrainingRunIn(BaseModel):
+    stage: str = Field(pattern=r"^(rft|dpo|grpo_offpolicy|grpo_onpolicy)$")
+    base_model: str = "Qwen/Qwen3-8B"
+    adapter_from: UUID | None = None
+    smoke: bool = False
+    dry: bool = False
+    simulator: bool = False
+    allow_rm_reward: bool = False
+
+
+class TrainingRunOut(Out):
+    id: UUID
+    stage: str
+    status: str
+    config_hash: str | None
+    snapshot_hash: str | None
+    rm_version: str | None
+    verifier_version: str | None
+    base_model: str | None
+    checkpoint_uri: str | None
+    metrics: dict[str, Any]
+    stop_reason: str | None
+    created_by: str
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+
+
+class EvalLaunchIn(BaseModel):
+    kind: str = Field(default="online", pattern=r"^(online|loop_b_vs_loop_a)$")
+    systems: list[str] = Field(default_factory=lambda: ["loop_a_fake", "random_fake"])
+    n_briefs: int = Field(default=3, ge=1, le=200)
+    budget_cap: float = Field(default=2000.0, gt=0)
+    seed: int = 0
+    max_days: int = Field(default=120, ge=1, le=400)
+    inline: bool = True
+
+
+class EvalArmOut(Out):
+    id: UUID
+    system: str
+    blind_label: str
+    n_briefs: int
+    tier2_rate: float | None
+    ci_low: float | None
+    ci_high: float | None
+    details: dict[str, Any]
+
+
+class EvalRunOut(Out):
+    id: UUID
+    kind: str
+    status: str
+    holdout_brief_ids: list[UUID]
+    attribution_setting: str | None
+    config_hash: str | None
+    summary: dict[str, Any]
+    created_by: str
+    created_at: datetime
+    finished_at: datetime | None
+    arms: list[EvalArmOut] = Field(default_factory=list)
+    job_id: UUID | None = None
+
+
+class FeedbackOut(Resp):
+    action: str
+    count: int
+    version: str | None = None
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    reason: str | None = None

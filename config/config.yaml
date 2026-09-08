@@ -85,6 +85,8 @@ rl:
   shaping_weight: 0.3                # rm_score weight when outcome is null; decays to 0
   learning_rate: 1.0e-5
   lora: { r: 16, alpha: 32, dropout: 0.05 }
+  min_positives_to_train: 50           # tier 2+ trajectories needed before a real training run
+  feedback_weekday: 6                  # Sunday: suggest relations, retrain verifier + RM, snapshot
   guards:
     swing_rate_min: 0.15             # fraction of rollouts labeled uncommon|rare must stay above this
     entropy_floor: 0.6

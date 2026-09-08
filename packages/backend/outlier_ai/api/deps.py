@@ -27,6 +27,8 @@ ROLE_MATRIX: dict[str, set[str]] = {
     "eval:write": {"researcher"},
     "import:write": {"expert", "operator", "researcher"},
     "kill_switch:write": {"operator", "researcher"},
+    "training:write": {"researcher"},
+    "feedback:write": {"researcher", "expert"},
 }
 
 

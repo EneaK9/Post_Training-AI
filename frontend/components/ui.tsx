@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { X } from "lucide-react";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ComponentProps, ReactNode, SelectHTMLAttributes } from "react";
 
 export function Button({
   variant = "default",
@@ -26,9 +26,9 @@ export function Button({
   );
 }
 
-export function Badge({ children, className, title }: { children: ReactNode; className?: string; title?: string }) {
+export function Badge({ children, className, ...rest }: ComponentProps<"span">) {
   return (
-    <span title={title} className={clsx("inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium leading-4", className)}>
+    <span {...rest} className={clsx("inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium leading-4", className)}>
       {children}
     </span>
   );
@@ -48,11 +48,11 @@ export function Panel({ title, actions, children, className, testId }: { title?:
   );
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+export function Input(props: ComponentProps<"input">) {
   return <input {...props} className={clsx("w-full rounded-md border border-line bg-background px-2 py-1.5 text-sm", props.className)} />;
 }
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea(props: ComponentProps<"textarea">) {
   return <textarea {...props} className={clsx("w-full rounded-md border border-line bg-background px-2 py-1.5 text-sm", props.className)} />;
 }
 

@@ -7,6 +7,7 @@ dependencies = [
   "outlier-schemas",
   "numpy>=2.0",
   "pyarrow>=17",
+  "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

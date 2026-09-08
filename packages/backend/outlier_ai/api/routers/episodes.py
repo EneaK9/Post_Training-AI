@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -205,3 +205,146 @@ async def keep_running(
         after={"keep_running_after_outlier": value},
     )
     return await episode_out(db, ep)
+
+
+@router.post("/{episode_id}/step", response_model=EpisodeOut)
+async def step_episode(
+    episode_id: UUID,
+    db: DB,
+    cfg: Config,
+    user: User = Depends(require("episodes:write")),
+    approval: str = "manual",
+    k: int | None = None,
+    no_llm: bool = False,
+) -> EpisodeOut:
+    """One Loop A decision cycle: generate the next batch and, unless approval is manual, approve
+    the top ideas by rm_score and ship them through the account's client."""
+    from outlier_ai.core.errors import SafetyError
+    from outlier_ai.core.storage import get_storage
+    from outlier_ai.episodes.loop_a import LoopARunner
+    from outlier_ai.generation.factory import build_service
+    from outlier_ai.meta.factory import client_for_account
+    from outlier_ai.models.meta import AdAccount
+    from outlier_schemas.enums import BackendKind
+
+    ep = await _get(db, episode_id)
+    account = await db.get(AdAccount, ep.ad_account_id) if ep.ad_account_id else None
+    if account is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "episode has no ad account")
+    if account.status != "active":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"account is {account.status}; reconnect it before running"
+        )
+    if approval not in ("manual", "top_rm", "random"):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "approval must be manual | top_rm | random"
+        )
+    try:
+        client = await client_for_account(db, account, cfg, require_shippable=approval != "manual")
+    except SafetyError as e:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
+    service = await build_service(
+        db, cfg, backend_kind=BackendKind(ep.backend), use_llm_judges=not no_llm
+    )
+    runner = LoopARunner(
+        session=db,
+        cfg=cfg,
+        service=service,
+        client=client,
+        storage=get_storage(),
+        approval=approval,
+        actor=user.email,
+    )  # type: ignore[arg-type]
+    report = await runner.step(ep, k=k)
+    if report.skipped_reason:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"no batch started: {report.skipped_reason}")
+    return await episode_out(db, ep, include_trace=True)
+
+
+@router.post("/{episode_id}/simulate", response_model=EpisodeOut)
+async def simulate_episode(
+    episode_id: UUID,
+    db: DB,
+    cfg: Config,
+    user: User = Depends(require("episodes:write")),
+    days: int = 1,
+) -> EpisodeOut:
+    """Fake accounts only: advance the fake clock, sync insights, run the controller."""
+    from outlier_ai.core.storage import get_storage
+    from outlier_ai.episodes.controller import tick_episode
+    from outlier_ai.jobs.handlers import sync_insights_for_account
+    from outlier_ai.meta.factory import client_for_account
+    from outlier_ai.meta.fake import FakeMetaClient
+    from outlier_ai.models.meta import AdAccount
+
+    ep = await _get(db, episode_id)
+    account = await db.get(AdAccount, ep.ad_account_id) if ep.ad_account_id else None
+    if account is None or not account.is_fake:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "simulate is only for fake accounts"
+        )
+    client = await client_for_account(db, account, cfg)
+    assert isinstance(client, FakeMetaClient)
+    for _ in range(max(1, min(days, 60))):
+        today = await client.advance_days(1)
+        await sync_insights_for_account(
+            db, account, cfg, client=client, today=today + timedelta(days=1)
+        )
+        await tick_episode(
+            db,
+            ep,
+            client=client,
+            cfg=cfg,
+            now=datetime(today.year, today.month, today.day, 12, tzinfo=UTC),
+            storage=get_storage(),
+        )
+    await record_audit(
+        db,
+        actor_id=user.email,
+        action="episode.simulate",
+        object_type="episode",
+        object_id=ep.id,
+        after={"days": days, "status": ep.status},
+    )
+    return await episode_out(db, ep, include_trace=True)
+
+
+@router.post("/{episode_id}/ship", response_model=EpisodeOut)
+async def ship_approved_ideas(
+    episode_id: UUID, db: DB, cfg: Config, user: User = Depends(require("episodes:write"))
+) -> EpisodeOut:
+    """Ship every `run`-labeled idea in this episode that has not shipped yet."""
+    from outlier_ai.core.errors import SafetyError
+    from outlier_ai.core.storage import get_storage
+    from outlier_ai.episodes.controller import TickReport, ship_approved
+    from outlier_ai.meta.factory import client_for_account
+    from outlier_ai.models.meta import AdAccount
+
+    ep = await _get(db, episode_id)
+    account = await db.get(AdAccount, ep.ad_account_id) if ep.ad_account_id else None
+    if account is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "episode has no ad account")
+    try:
+        client = await client_for_account(db, account, cfg, require_shippable=True)
+    except SafetyError as e:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
+    report = TickReport(episode_id=ep.id)
+    shipped = await ship_approved(
+        db,
+        ep,
+        client=client,
+        storage=get_storage(),
+        cfg=cfg,
+        report=report,
+        now=datetime.now(UTC),
+        actor=user.email,
+    )
+    await record_audit(
+        db,
+        actor_id=user.email,
+        action="episode.ship_approved",
+        object_type="episode",
+        object_id=ep.id,
+        after={"shipped_renders": shipped, "events": report.events[:10]},
+    )
+    return await episode_out(db, ep, include_trace=True)

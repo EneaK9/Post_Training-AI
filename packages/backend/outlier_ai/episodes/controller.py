@@ -25,14 +25,17 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from outlier_ai.core.audit import record_audit
-from outlier_ai.episodes.budget import episode_spent
+from outlier_ai.core.errors import SafetyError
+from outlier_ai.core.settings import Settings
+from outlier_ai.core.storage import Storage
+from outlier_ai.episodes.budget import episode_committed, episode_spent
 from outlier_ai.meta import campaign as campaigns
 from outlier_ai.meta.base import MetaClient
 from outlier_ai.models.episodes import Batch, SearchEpisode
 from outlier_ai.models.meta import DailyInsight
-from outlier_ai.models.trajectories import Render, ScreeningStats, Trajectory
+from outlier_ai.models.trajectories import Render, Review, ScreeningStats, Trajectory
 from outlier_schemas.config import AppConfig
-from outlier_schemas.enums import BatchState, EpisodeStatus, RenderStatus
+from outlier_schemas.enums import BatchState, EpisodeStatus, RenderStatus, ReviewLabel
 
 TERMINAL_BATCH = {BatchState.measured.value, BatchState.stopped.value}
 LIVE = {RenderStatus.pending_review.value, RenderStatus.screening.value, RenderStatus.scaled.value}
@@ -310,18 +313,81 @@ async def can_start_next_batch(
     if last.state == BatchState.screening.value:
         return False, f"batch {last.index} screening has not resolved"
     spent = await episode_spent(session, episode.id)
+    committed = await episode_committed(session, episode.id, cfg)
     next_cost = (
         cfg.episode.ideas_per_batch
         * cfg.episode.renders_per_idea
         * cfg.episode.screening_budget_per_ad_usd
         * cfg.episode.screening_days
     )
-    if spent + next_cost > episode.budget_cap:
+    # Same arithmetic as the budget governor so a batch we start is a batch we can ship.
+    if spent + committed + next_cost > episode.budget_cap:
         return (
             False,
-            f"budget: {spent:.0f} spent + {next_cost:.0f} for a batch > {episode.budget_cap:.0f} cap",
+            f"budget: {spent:.0f} spent + {committed:.0f} committed + "
+            f"{next_cost:.0f} for a batch > "
+            f"{episode.budget_cap:.0f} cap",
         )
     return True, "ok"
+
+
+async def ship_approved(
+    session: AsyncSession,
+    episode: SearchEpisode,
+    *,
+    client: MetaClient,
+    storage: Storage,
+    cfg: AppConfig,
+    report: TickReport,
+    now: datetime,
+    settings: Settings | None = None,
+    actor: str = "controller",
+) -> int:
+    """The human `run` label is the approval: ship every approved idea that still has draft
+    renders. The budget governor gates each one; refusals are recorded, not raised."""
+    from outlier_ai.meta.ship import ship_trajectory  # local import avoids a cycle
+
+    rows = await session.execute(
+        select(Trajectory.id)
+        .join(Review, Review.trajectory_id == Trajectory.id)
+        .join(Render, Render.trajectory_id == Trajectory.id)
+        .where(
+            Trajectory.episode_id == episode.id,
+            Review.label == ReviewLabel.run.value,
+            Trajectory.format_ok.is_(True),
+            Render.status == RenderStatus.draft.value,
+            Render.image_uri.is_not(None),
+        )
+        .distinct()
+    )
+    shipped = 0
+    for (tid,) in rows.all():
+        try:
+            result = await ship_trajectory(
+                session,
+                tid,
+                client=client,
+                storage=storage,
+                cfg=cfg,
+                actor=actor,
+                settings=settings,
+                now=now,
+            )
+            shipped += len(result.shipped_render_ids)
+            report.log(
+                f"shipped {len(result.shipped_render_ids)} renders for approved trajectory {tid}"
+            )
+        except SafetyError as e:
+            report.log(f"ship refused for {tid}: {e}")
+            await record_audit(
+                session,
+                actor_id=actor,
+                action="trajectory.ship_refused",
+                object_type="trajectory",
+                object_id=tid,
+                after={"reason": str(e)},
+            )
+    return shipped
 
 
 async def tick_episode(
@@ -331,14 +397,28 @@ async def tick_episode(
     client: MetaClient,
     cfg: AppConfig,
     now: datetime | None = None,
+    storage: Storage | None = None,
+    settings: Settings | None = None,
 ) -> TickReport:
-    """One controller step. Call after insights have been synced and outcomes recomputed."""
+    """One controller step. Call after insights have been synced and outcomes recomputed.
+    With a storage handle, approved ideas that have not shipped yet ship first."""
     now = now or datetime.now(UTC)
     report = TickReport(episode_id=episode.id)
     if episode.status != EpisodeStatus.searching.value:
         report.status = episode.status
         return report
 
+    if storage is not None:
+        await ship_approved(
+            session,
+            episode,
+            client=client,
+            storage=storage,
+            cfg=cfg,
+            report=report,
+            now=now,
+            settings=settings,
+        )
     await poll_reviews(session, episode, client, report, now)
     await advance_screening(session, episode, client, cfg, report, now)
     await advance_scale(session, episode, client, cfg, report, now)
@@ -364,6 +444,11 @@ async def tick_episode(
         report.log(f"OUTLIER FOUND: trajectory {best.id} tier {best.outlier_tier}")
         if not episode.keep_running_after_outlier:
             await stop_live_ads(session, episode, client, report, now, except_trajectory=best.id)
+        from outlier_ai.jobs.feedback import suggest_relations  # local import avoids a cycle
+
+        suggested = await suggest_relations(session)
+        if suggested:
+            report.log(f"suggested {len(suggested)} card relations from tier 2+ co-occurrence")
         await record_audit(
             session,
             actor_id="controller",

@@ -26,6 +26,11 @@ _FIELD = {
     "product": re.compile(r"^Product: (.+)$", re.M),
     "offer": re.compile(r"^Offer: (.+)$", re.M),
 }
+_HISTORY_ITEM = re.compile(
+    r"Cards: (?P<cards>[a-z0-9+ -]+?)(?: \| labeled \w+)?\nResult: (?P<result>[^\n]+)", re.M
+)
+_TIER = re.compile(r"tier (\d)")
+_SCREEN = re.compile(r"screen fail \((\d+\.\d+)x")
 
 HOOKS = [
     "Stop doing it the old way.",
@@ -45,9 +50,14 @@ class FakeBackend:
     model = "fake-composer-v1"
     trainable = False
 
-    def __init__(self, seed: int = 0, malformed_rate: float = 0.0) -> None:
+    def __init__(self, seed: int = 0, malformed_rate: float = 0.0, policy: str = "random") -> None:
+        """`policy`: "random" ignores history; "archive" scores strategies from the history
+        section of the prompt (tier, screening ratio) and samples proportionally, with a floor so
+        untried strategies keep getting explored. This is the stand-in for what an LLM does with
+        column 3, and the thing the loop-A-vs-random experiment measures."""
         self.rng = np.random.default_rng(seed)
         self.malformed_rate = malformed_rate
+        self.policy = policy
 
     @staticmethod
     def parse_playbook(prompt: str) -> dict[str, list[tuple[str, str]]]:
@@ -67,11 +77,44 @@ class FakeBackend:
                 playbook[current].append((c.group(1), c.group(2)))
         return playbook
 
-    def _pick(self, pool: list[tuple[str, str]], n: int) -> list[tuple[str, str]]:
+    def _pick(
+        self, pool: list[tuple[str, str]], n: int, weights: dict[str, float] | None = None
+    ) -> list[tuple[str, str]]:
         if not pool or n <= 0:
             return []
-        idx = self.rng.choice(len(pool), size=min(n, len(pool)), replace=False)
+        n = min(n, len(pool))
+        if weights:
+            w = np.array([max(weights.get(slug, 1.0), 0.05) for slug, _ in pool], dtype=float)
+            w = w / w.sum()
+            idx = self.rng.choice(len(pool), size=n, replace=False, p=w)
+        else:
+            idx = self.rng.choice(len(pool), size=n, replace=False)
         return [pool[int(i)] for i in idx]
+
+    @staticmethod
+    def strategy_scores(prompt: str, strategy_slugs: list[str]) -> dict[str, float]:
+        """Evidence per strategy from history: tier 2+ counts a lot, tier 1 a little, screen
+        failures and tier 0 count against. Unseen strategies get a neutral prior."""
+        scores = {s: 1.0 for s in strategy_slugs}
+        seen: dict[str, int] = dict.fromkeys(strategy_slugs, 0)
+        strategy_set = set(strategy_slugs)
+        for m in _HISTORY_ITEM.finditer(prompt):
+            cards = [c.strip() for c in m.group("cards").split("+")]
+            result = m.group("result")
+            tier_m = _TIER.search(result)
+            if tier_m:
+                tier = int(tier_m.group(1))
+                delta = {0: -0.6, 1: 0.4, 2: 3.0, 3: 4.0}[tier]
+            elif _SCREEN.search(result):
+                delta = -0.4
+            else:
+                delta = 0.0
+            for c in cards:
+                if c in strategy_set:
+                    scores[c] += delta
+                    seen[c] += 1
+        # exploration bonus for strategies with little evidence
+        return {s: max(0.2, v) + (0.8 if seen[s] == 0 else 0.0) for s, v in scores.items()}
 
     def compose(self, prompt: str) -> str:
         playbook = self.parse_playbook(prompt)

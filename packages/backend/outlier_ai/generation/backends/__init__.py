@@ -21,12 +21,13 @@ def get_generator(
     *,
     seed: int = 0,
     adapter: str | None = None,
+    fake_policy: str = "archive",
 ) -> GeneratorBackend:
     s = settings or get_settings()
     if kind == BackendKind.fake:
         from outlier_ai.generation.backends.fake_backend import FakeBackend
 
-        return FakeBackend(seed=seed)
+        return FakeBackend(seed=seed, policy=fake_policy)
     if kind == BackendKind.anthropic:
         from outlier_ai.generation.backends.anthropic_backend import AnthropicBackend
 

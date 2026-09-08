@@ -105,7 +105,7 @@ class GenerationService:
         )
 
     async def _open_batch(
-        self, session: AsyncSession, episode_id: UUID, trace: PromptTrace
+        self, session: AsyncSession, episode_id: UUID, trace: PromptTrace, prompt: str = ""
     ) -> tuple[SearchEpisode, Batch]:
         episode = await session.get(SearchEpisode, episode_id)
         if episode is None:
@@ -130,7 +130,7 @@ class GenerationService:
             episode_id=episode_id,
             index=n,
             state="proposed",
-            prompt_trace=trace.as_dict(),
+            prompt_trace={**trace.as_dict(), "prompt": prompt},
         )
         session.add(batch)
         await session.flush()
@@ -169,7 +169,7 @@ class GenerationService:
         episode: SearchEpisode | None = None
         batch: Batch | None = None
         if req.episode_id is not None:
-            episode, batch = await self._open_batch(session, req.episode_id, trace)
+            episode, batch = await self._open_batch(session, req.episode_id, trace, prompt)
 
         raw = (await self.backend.generate(prompt, n=1))[0]
         ref_map = {r: UUID(u) for r, u in trace.ref_map.items()}

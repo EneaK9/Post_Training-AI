@@ -44,121 +44,7 @@ def dt(d: date) -> datetime:
     return datetime(d.year, d.month, d.day, 12, tzinfo=UTC)
 
 
-class Stack:
-    def __init__(
-        self, session: AsyncSession, cfg: AppConfig, storage_dir, *, fake_seed=3, rejection_rate=0.0
-    ):
-        self.session = session
-        self.cfg = cfg
-        self.storage = LocalStorage(storage_dir)
-        self.fake_seed = fake_seed
-        self.rejection_rate = rejection_rate
-
-    async def setup(self, n=60, s=4):
-        await seed(
-            self.session, n_briefs=3, n_trajectories=n, seed=s, days_back=90, config=self.cfg
-        )
-        await recompute_all(self.session, self.cfg)
-        self.account = (
-            await self.session.execute(
-                select(AdAccount).where(AdAccount.meta_account_id == FAKE_ACCOUNT_ID)
-            )
-        ).scalar_one()
-        self.brief = (
-            (await self.session.execute(select(Brief).order_by(Brief.created_at))).scalars().first()
-        )
-        self.client = FakeMetaClient(
-            self.session,
-            FAKE_ACCOUNT_ID,
-            default_latent(),
-            seed=self.fake_seed,
-            rejection_rate=self.rejection_rate,
-            review_delay_days=1,
-            start_day=START,
-        )
-        self.episode = SearchEpisode(
-            brief_id=self.brief.id,
-            ad_account_id=self.account.id,
-            backend="fake",
-            budget_cap=self.cfg.episode.default_budget_cap_usd,
-            created_by="test",
-        )
-        self.session.add(self.episode)
-        await self.session.commit()
-        cards = await load_card_refs(self.session)
-        self.service = GenerationService(
-            backend=FakeBackend(seed=self.fake_seed),
-            verifier=HeuristicVerifier(cards),
-            reward_model=HeuristicColdRewardModel(),
-            image_backend=get_image_backend(ImageMode.brand_assets),
-            storage=self.storage,
-            embedder=HashEmbedder(self.cfg.archive.embedding_dims),
-            cfg=self.cfg,
-        )
-        return self
-
-    async def generate_and_approve(self, k=4, renders=1, now=None):
-        result = await self.service.generate_batch(
-            self.session,
-            GenerationRequest(
-                brief_id=self.brief.id,
-                episode_id=self.episode.id,
-                backend=BackendKind.fake,
-                k=k,
-                renders_per_idea=renders,
-            ),
-            now=now,
-        )
-        for idea in result.queued:
-            self.session.add(
-                Review(
-                    trajectory_id=idea.trajectory.id,
-                    label="run",
-                    reviewer_id="expert@example.com",
-                    note="",
-                )
-            )
-        await self.session.commit()
-        return result
-
-    async def ship(self, batch_id, now):
-        results = await ship_batch(
-            self.session,
-            batch_id,
-            client=self.client,
-            storage=self.storage,
-            cfg=self.cfg,
-            actor="test",
-            now=now,
-        )
-        await self.session.commit()
-        return results
-
-    async def advance(self, days):
-        today = await self.client.advance_days(days)
-        await self.session.commit()
-        return today
-
-    async def sync_and_tick(self, today: date):
-        await run_sync_insights(
-            self.session,
-            self.cfg,
-            account_id=self.account.id,
-            today=today + timedelta(days=1),
-            clients={self.account.id: self.client},
-        )
-        report = await tick_episode(
-            self.session, self.episode, client=self.client, cfg=self.cfg, now=dt(today)
-        )
-        await self.session.commit()
-        return report
-
-
-async def _count(session, model, *where):
-    return int(
-        (await session.execute(select(func.count()).select_from(model).where(*where))).scalar_one()
-    )
-
+from helpers.episode_stack import START, Stack, dt  # noqa: E402
 
 async def test_full_episode_screening_to_measured(
     db_session: AsyncSession, app_config: AppConfig, tmp_path
@@ -187,6 +73,7 @@ async def test_full_episode_screening_to_measured(
         for r in renders
     )
     batch = await db_session.get(Batch, result.batch_id)
+    assert batch is not None
     assert batch.state == "in_review"
     assert await _count(db_session, AuditLog, AuditLog.action == "trajectory.ship") == 4
     ok, reason = await can_start_next_batch(db_session, st.episode, app_config)
@@ -268,6 +155,7 @@ async def test_all_renders_rejected_keeps_outcome_null_and_spend_zero(
     await db_session.refresh(st.episode)
     assert st.episode.spent == 0
     batch = await db_session.get(Batch, result.batch_id)
+    assert batch is not None
     assert batch.state == "measured"
     ok, _ = await can_start_next_batch(db_session, st.episode, app_config)
     assert ok  # the episode requests the next batch without counting the spend
@@ -336,7 +224,7 @@ async def test_budget_exhausted_and_governor_caps(
     await db_session.commit()
     result = await st.generate_and_approve(k=4, renders=1, now=dt(START))
     await st.ship(result.batch_id, dt(START))
-    ok, reason = await can_start_next_batch(db_session, st.episode, app_config)
+    ok, _reason = await can_start_next_batch(db_session, st.episode, app_config)
     assert not ok
     today = await st.advance(1)
     await st.sync_and_tick(today)
@@ -370,6 +258,7 @@ async def test_budget_exhausted_and_governor_caps(
     assert not d.allowed and "daily cap" in d.reason
     # governor: kill switch
     ks = await db_session.get(KillSwitch, 1)
+    assert ks is not None
     ks.shipping_enabled = False
     await db_session.commit()
     d = await check_budget(
@@ -445,6 +334,7 @@ async def test_ship_requires_run_label_and_clean_preship(
             db_session, tid, client=st.client, storage=st.storage, cfg=app_config, actor="test"
         )
     traj = await db_session.get(Trajectory, tid)
+    assert traj is not None
     traj.preship = {
         **(traj.preship or {}),
         "policy_ok": False,

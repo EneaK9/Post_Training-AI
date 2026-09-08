@@ -60,7 +60,13 @@ async def ship_trajectory(
 ) -> ShipResult:
     s = settings or get_settings()
     now = now or datetime.now(UTC)
-    traj = await session.get(Trajectory, trajectory_id)
+    # lock the trajectory so concurrent ship calls (tick + button) serialize; the second one
+    # then finds no draft renders and skips
+    traj = (
+        await session.execute(
+            select(Trajectory).where(Trajectory.id == trajectory_id).with_for_update()
+        )
+    ).scalar_one_or_none()
     if traj is None:
         raise NotFoundError(f"trajectory {trajectory_id} not found")
     if traj.episode_id is None:
@@ -203,18 +209,30 @@ async def ship_batch(
     )
     results: list[ShipResult] = []
     for (tid,) in rows.all():
-        results.append(
-            await ship_trajectory(
-                session,
-                tid,
-                client=client,
-                storage=storage,
-                cfg=cfg,
-                actor=actor,
-                settings=settings,
-                now=now,
+        try:
+            results.append(
+                await ship_trajectory(
+                    session,
+                    tid,
+                    client=client,
+                    storage=storage,
+                    cfg=cfg,
+                    actor=actor,
+                    settings=settings,
+                    now=now,
+                )
             )
-        )
+        except SafetyError as e:
+            # one refused idea must not abort the batch; the refusal is recorded and visible
+            results.append(ShipResult(trajectory_id=tid, skipped=[str(e)]))
+            await record_audit(
+                session,
+                actor_id=actor,
+                action="trajectory.ship_refused",
+                object_type="trajectory",
+                object_id=tid,
+                after={"reason": str(e)},
+            )
     if results and batch.state in (BatchState.proposed.value, BatchState.approved.value):
         batch.state = BatchState.in_review.value
     return results

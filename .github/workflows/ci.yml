@@ -107,3 +107,22 @@ jobs:
         with:
           name: playwright-report
           path: frontend/playwright-report
+
+  # GPU-only: real trainer steps on a tiny model. Runs when a PR carries the `gpu` label.
+  trainer-smoke:
+    if: contains(github.event.pull_request.labels.*.name, 'gpu')
+    runs-on: [self-hosted, gpu]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync --package outlier-trainer --extra train
+      - run: |
+          for stage in rft dpo grpo_offpolicy; do
+            uv run --package outlier-trainer python -m outlier_trainer.run \
+              --stage $stage --snapshot tests/fixtures/mini_snapshot.parquet \
+              --out /tmp/oai-$stage --base-model Qwen/Qwen3-0.6B --smoke
+          done
+          uv run --package outlier-trainer python -m outlier_trainer.run \
+            --stage grpo_onpolicy --snapshot tests/fixtures/mini_snapshot.parquet \
+            --out /tmp/oai-onpolicy --base-model Qwen/Qwen3-0.6B --smoke --simulator

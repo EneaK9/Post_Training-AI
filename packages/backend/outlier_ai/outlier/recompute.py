@@ -16,7 +16,7 @@ from datetime import UTC, date, datetime
 from uuid import UUID
 
 import numpy as np
-from sqlalchemy import select
+from sqlalchemy import false, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from outlier_ai.archive.combinations import refresh_tier_counts
@@ -36,7 +36,7 @@ from outlier_ai.outlier.screening import compute_screening
 from outlier_ai.outlier.stats import bootstrap_ratio_lower_bound
 from outlier_ai.outlier.tiers import tier_for_ratio
 from outlier_schemas.config import AppConfig
-from outlier_schemas.enums import BaselineKind, OutcomeMetric, Tier
+from outlier_schemas.enums import BaselineKind, OutcomeMetric, RenderStatus, Tier
 
 
 @dataclass(frozen=True)
@@ -205,6 +205,9 @@ async def recompute_account(
     tier_counts: dict[int, int] = defaultdict(int)
     best_by_traj: dict[UUID, tuple[int, float, UUID, datetime]] = {}
     trajectories_seen: set[UUID] = set()
+    # shipped ideas whose screening window completed without a pass: tier 0 (spec 7.2: the
+    # outcome reward is null only for ideas never shipped)
+    screen_fail_by_traj: dict[UUID, tuple[UUID, datetime]] = {}
 
     for agg in aggs:
         summary.renders += 1
@@ -246,6 +249,13 @@ async def recompute_account(
                 )
             )
             summary.screening_rows += 1
+            if screening.window_complete and not screening.passed:
+                fail_at = datetime.combine(
+                    agg.last_day or (as_of or now.date()), datetime.min.time(), tzinfo=UTC
+                )
+                prev = screen_fail_by_traj.get(agg.trajectory_id)
+                if prev is None or fail_at > prev[1]:
+                    screen_fail_by_traj[agg.trajectory_id] = (agg.render_id, fail_at)
 
         cat = category_median_for(agg.category, cfg.category_medians)
         measured_at = datetime.combine(measured_day, datetime.min.time(), tzinfo=UTC)
@@ -282,13 +292,32 @@ async def recompute_account(
             if best is None or key[:2] > best[:2]:
                 best_by_traj[agg.trajectory_id] = key
 
-    # Idea-level outcome: max across renders. Trajectories with rows but no scale data get
-    # tier None (pending / never scaled), which the archive treats as "no outcome".
+    # Idea-level outcome: max across renders. Ideas with no scale data are tier 0 once every
+    # shipped render has finished screening without a pass and nothing is still live; ideas
+    # still pending or at scale without a full window stay None ("no outcome yet").
+    live_rows = await session.execute(
+        select(Render.trajectory_id)
+        .where(
+            Render.trajectory_id.in_(trajectories_seen) if trajectories_seen else false(),
+            Render.status.in_(
+                (
+                    RenderStatus.pending_review.value,
+                    RenderStatus.screening.value,
+                    RenderStatus.scaled.value,
+                )
+            ),
+        )
+        .distinct()
+    )
+    still_live = {tid for (tid,) in live_rows.all()}
     for traj_id in trajectories_seen:
         traj = await session.get(Trajectory, traj_id)
         if traj is None:
             continue
         best = best_by_traj.get(traj_id)
+        if best is None and traj_id in screen_fail_by_traj and traj_id not in still_live:
+            render_id, fail_at = screen_fail_by_traj[traj_id]
+            best = (0, 0.0, render_id, fail_at)
         if best is None:
             traj.outlier_tier = None
             traj.outcome_render_id = None
