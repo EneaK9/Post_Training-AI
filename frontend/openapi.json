@@ -3309,6 +3309,8 @@
           "category",
           "daily_cap_usd",
           "is_fake",
+          "has_access_token",
+          "has_page_token",
           "last_sync_at",
           "last_error"
         ],
@@ -3412,6 +3414,12 @@
         },
         "additionalProperties": false,
         "type": "object",
+        "required": [
+          "primary_text",
+          "headline",
+          "description",
+          "cta"
+        ],
         "title": "AdCopy"
       },
       "ArchiveSampleOut": {
@@ -3579,7 +3587,9 @@
           "id",
           "index",
           "state",
-          "created_at"
+          "created_at",
+          "trajectory_ids",
+          "prompt_trace"
         ],
         "title": "BatchOut"
       },
@@ -3847,7 +3857,9 @@
           "constraints",
           "brand_assets",
           "raw_text",
-          "meta"
+          "meta",
+          "episode_count",
+          "trajectory_count"
         ],
         "title": "BriefOut"
       },
@@ -4115,7 +4127,8 @@
           "status",
           "version",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "stats"
         ],
         "title": "CardOut"
       },
@@ -4160,6 +4173,13 @@
           }
         },
         "type": "object",
+        "required": [
+          "uses",
+          "measured",
+          "tier2_count",
+          "tier2_rate",
+          "verifier_agreement"
+        ],
         "title": "CardStats"
       },
       "CardUpdate": {
@@ -4384,6 +4404,7 @@
         "required": [
           "id",
           "card_ids",
+          "card_slugs",
           "niche_key",
           "uses",
           "tier_counts",
@@ -4832,7 +4853,11 @@
           "created_by",
           "created_at",
           "ended_at",
-          "stop_reason"
+          "stop_reason",
+          "batches",
+          "live_ads",
+          "best_tier",
+          "new_signals"
         ],
         "title": "EpisodeOut"
       },
@@ -5066,6 +5091,12 @@
           }
         },
         "type": "object",
+        "required": [
+          "created",
+          "updated",
+          "skipped",
+          "errors"
+        ],
         "title": "ImportResult"
       },
       "KillSwitchIn": {
@@ -5351,6 +5382,13 @@
         },
         "additionalProperties": false,
         "type": "object",
+        "required": [
+          "policy_ok",
+          "policy_flags",
+          "brand_ok",
+          "brand_flags",
+          "length_warnings"
+        ],
         "title": "PreshipReport"
       },
       "PromptOut": {
@@ -5588,7 +5626,9 @@
           "status",
           "rejection_reason",
           "meta_ad_id",
-          "shipped_at"
+          "shipped_at",
+          "screening",
+          "outcome"
         ],
         "title": "RenderOut"
       },
@@ -5762,7 +5802,8 @@
         "required": [
           "type",
           "id",
-          "label"
+          "label",
+          "sub"
         ],
         "title": "SearchHit"
       },
@@ -6276,6 +6317,8 @@
           "backend",
           "card_ids",
           "verified_card_ids",
+          "card_slugs",
+          "verified_card_slugs",
           "tag_source",
           "tag_match",
           "tag_jaccard",
@@ -6289,11 +6332,18 @@
           "visual_brief",
           "preship",
           "outlier_tier",
+          "screening_ratio",
+          "ratio",
           "rm_score",
           "rm_version",
           "library_version",
           "config_hash",
-          "created_at"
+          "created_at",
+          "review",
+          "renders",
+          "signals",
+          "notes",
+          "comments"
         ],
         "title": "TrajectoryDetail"
       },
@@ -6605,6 +6655,8 @@
           "backend",
           "card_ids",
           "verified_card_ids",
+          "card_slugs",
+          "verified_card_slugs",
           "tag_source",
           "tag_match",
           "tag_jaccard",
@@ -6618,11 +6670,17 @@
           "visual_brief",
           "preship",
           "outlier_tier",
+          "screening_ratio",
+          "ratio",
           "rm_score",
           "rm_version",
           "library_version",
           "config_hash",
-          "created_at"
+          "created_at",
+          "review",
+          "renders",
+          "signals",
+          "notes"
         ],
         "title": "TrajectoryOut"
       },

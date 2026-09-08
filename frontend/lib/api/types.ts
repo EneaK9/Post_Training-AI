@@ -924,7 +924,7 @@ export interface components {
              * Attribution Setting
              * @default 7d_click_1d_view
              */
-            attribution_setting: string;
+            attribution_setting?: string;
             /** Category */
             category?: string | null;
             /** Daily Cap Usd */
@@ -937,7 +937,7 @@ export interface components {
              * Is Fake
              * @default false
              */
-            is_fake: boolean;
+            is_fake?: boolean;
         };
         /** AccountOut */
         AccountOut: {
@@ -1087,9 +1087,9 @@ export interface components {
              */
             created_at: string;
             /** Trajectory Ids */
-            trajectory_ids?: string[];
+            trajectory_ids: string[];
             /** Prompt Trace */
-            prompt_trace?: {
+            prompt_trace: {
                 [key: string]: unknown;
             } | null;
         };
@@ -1129,17 +1129,17 @@ export interface components {
              * Goal Metric
              * @default purchases
              */
-            goal_metric: string;
+            goal_metric?: string;
             /**
              * Channel
              * @default meta_feed_image
              */
-            channel: string;
+            channel?: string;
             /**
              * World State
              * @default
              */
-            world_state: string;
+            world_state?: string;
             /** Constraints */
             constraints?: string[];
             /** Brand Assets */
@@ -1148,7 +1148,7 @@ export interface components {
              * Raw Text
              * @default
              */
-            raw_text: string;
+            raw_text?: string;
             /** Ad Account Id */
             ad_account_id?: string | null;
             /** Meta */
@@ -1249,14 +1249,14 @@ export interface components {
              * Qualifying Condition
              * @default
              */
-            qualifying_condition: string;
+            qualifying_condition?: string;
             /** Source */
             source?: string | null;
             /**
              * Status
              * @default draft
              */
-            status: string;
+            status?: string;
         };
         /**
          * CardKind
@@ -1298,7 +1298,7 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
-            stats?: components["schemas"]["CardStats"];
+            stats: components["schemas"]["CardStats"];
         };
         /** CardStats */
         CardStats: {
@@ -1318,9 +1318,9 @@ export interface components {
              */
             tier2_count: number;
             /** Tier2 Rate */
-            tier2_rate?: number | null;
+            tier2_rate: number | null;
             /** Verifier Agreement */
-            verifier_agreement?: number | null;
+            verifier_agreement: number | null;
         };
         /** CardUpdate */
         CardUpdate: {
@@ -1378,7 +1378,7 @@ export interface components {
             /** Card Ids */
             card_ids: string[];
             /** Card Slugs */
-            card_slugs?: string[];
+            card_slugs: string[];
             /** Niche Key */
             niche_key: string;
             /** Uses */
@@ -1432,7 +1432,7 @@ export interface components {
              * Note
              * @default
              */
-            note: string;
+            note?: string;
         };
         /** ConfigOut */
         ConfigOut: {
@@ -1503,14 +1503,14 @@ export interface components {
             /** Budget Cap */
             budget_cap?: number | null;
             /** @default fake */
-            backend: components["schemas"]["BackendKind"];
+            backend?: components["schemas"]["BackendKind"];
             /** Ad Account Id */
             ad_account_id?: string | null;
             /**
              * Keep Running After Outlier
              * @default false
              */
-            keep_running_after_outlier: boolean;
+            keep_running_after_outlier?: boolean;
         };
         /** EpisodeOut */
         EpisodeOut: {
@@ -1552,14 +1552,14 @@ export interface components {
             /** Stop Reason */
             stop_reason: string | null;
             /** Batches */
-            batches?: components["schemas"]["BatchOut"][];
+            batches: components["schemas"]["BatchOut"][];
             /**
              * Live Ads
              * @default 0
              */
             live_ads: number;
             /** Best Tier */
-            best_tier?: number | null;
+            best_tier: number | null;
             /**
              * New Signals
              * @default 0
@@ -1576,27 +1576,27 @@ export interface components {
             /** Episode Id */
             episode_id?: string | null;
             /** @default fake */
-            backend: components["schemas"]["BackendKind"];
+            backend?: components["schemas"]["BackendKind"];
             /**
              * K
              * @default 8
              */
-            k: number;
+            k?: number;
             /**
              * Renders Per Idea
              * @default 3
              */
-            renders_per_idea: number;
+            renders_per_idea?: number;
             /**
              * No Llm
              * @default false
              */
-            no_llm: boolean;
+            no_llm?: boolean;
             /**
              * Seed
              * @default 0
              */
-            seed: number;
+            seed?: number;
         };
         /** GenerateOut */
         GenerateOut: {
@@ -1663,7 +1663,7 @@ export interface components {
              */
             skipped: number;
             /** Errors */
-            errors?: string[];
+            errors: string[];
         };
         /** KillSwitchIn */
         KillSwitchIn: {
@@ -1673,7 +1673,7 @@ export interface components {
              * Reason
              * @default
              */
-            reason: string;
+            reason?: string;
         };
         /** KillSwitchOut */
         KillSwitchOut: {
@@ -1703,14 +1703,14 @@ export interface components {
             /** Name */
             name: string;
             /** @default strategy */
-            kind: components["schemas"]["CardKind"];
+            kind?: components["schemas"]["CardKind"];
             /** Definition */
             definition: string;
             /**
              * Qualifying Condition
              * @default
              */
-            qualifying_condition: string;
+            qualifying_condition?: string;
         };
         /** NoteIn */
         NoteIn: {
@@ -1787,16 +1787,16 @@ export interface components {
              */
             policy_ok: boolean;
             /** Policy Flags */
-            policy_flags?: string[];
+            policy_flags: string[];
             /**
              * Brand Ok
              * @default true
              */
             brand_ok: boolean;
             /** Brand Flags */
-            brand_flags?: string[];
+            brand_flags: string[];
             /** Length Warnings */
-            length_warnings?: string[];
+            length_warnings: string[];
         };
         /** PromptOut */
         PromptOut: {
@@ -1891,8 +1891,8 @@ export interface components {
             meta_ad_id: string | null;
             /** Shipped At */
             shipped_at: string | null;
-            screening?: components["schemas"]["ScreeningOut"] | null;
-            outcome?: components["schemas"]["OutcomeOut"] | null;
+            screening: components["schemas"]["ScreeningOut"] | null;
+            outcome: components["schemas"]["OutcomeOut"] | null;
         };
         /** ReviewIn */
         ReviewIn: {
@@ -1903,7 +1903,7 @@ export interface components {
              * Note
              * @default
              */
-            note: string;
+            note?: string;
         };
         /**
          * ReviewLabel
@@ -1990,16 +1990,16 @@ export interface components {
             /** Render Id */
             render_id?: string | null;
             /** @default note */
-            kind: components["schemas"]["SignalKind"];
+            kind?: components["schemas"]["SignalKind"];
             /** Text */
             text: string;
             /** @default neu */
-            sentiment: components["schemas"]["Sentiment"];
+            sentiment?: components["schemas"]["Sentiment"];
             /**
              * Count
              * @default 1
              */
-            count: number;
+            count?: number;
         };
         /**
          * SignalKind
@@ -2077,9 +2077,9 @@ export interface components {
             /** Verified Card Ids */
             verified_card_ids: string[];
             /** Card Slugs */
-            card_slugs?: string[];
+            card_slugs: string[];
             /** Verified Card Slugs */
-            verified_card_slugs?: string[];
+            verified_card_slugs: string[];
             /** Tag Source */
             tag_source: string | null;
             /** Tag Match */
@@ -2105,9 +2105,9 @@ export interface components {
             /** Outlier Tier */
             outlier_tier: number | null;
             /** Screening Ratio */
-            screening_ratio?: number | null;
+            screening_ratio: number | null;
             /** Ratio */
-            ratio?: number | null;
+            ratio: number | null;
             /** Rm Score */
             rm_score: number | null;
             /** Rm Version */
@@ -2121,15 +2121,15 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            review?: components["schemas"]["ReviewOut"] | null;
+            review: components["schemas"]["ReviewOut"] | null;
             /** Renders */
-            renders?: components["schemas"]["RenderOut"][];
+            renders: components["schemas"]["RenderOut"][];
             /** Signals */
-            signals?: components["schemas"]["SignalOut"][];
+            signals: components["schemas"]["SignalOut"][];
             /** Notes */
-            notes?: components["schemas"]["NoteOut"][];
+            notes: components["schemas"]["NoteOut"][];
             /** Comments */
-            comments?: components["schemas"]["CommentOut"][];
+            comments: components["schemas"]["CommentOut"][];
         };
         /** TrajectoryOut */
         TrajectoryOut: {
@@ -2162,9 +2162,9 @@ export interface components {
             /** Verified Card Ids */
             verified_card_ids: string[];
             /** Card Slugs */
-            card_slugs?: string[];
+            card_slugs: string[];
             /** Verified Card Slugs */
-            verified_card_slugs?: string[];
+            verified_card_slugs: string[];
             /** Tag Source */
             tag_source: string | null;
             /** Tag Match */
@@ -2190,9 +2190,9 @@ export interface components {
             /** Outlier Tier */
             outlier_tier: number | null;
             /** Screening Ratio */
-            screening_ratio?: number | null;
+            screening_ratio: number | null;
             /** Ratio */
-            ratio?: number | null;
+            ratio: number | null;
             /** Rm Score */
             rm_score: number | null;
             /** Rm Version */
@@ -2206,13 +2206,13 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            review?: components["schemas"]["ReviewOut"] | null;
+            review: components["schemas"]["ReviewOut"] | null;
             /** Renders */
-            renders?: components["schemas"]["RenderOut"][];
+            renders: components["schemas"]["RenderOut"][];
             /** Signals */
-            signals?: components["schemas"]["SignalOut"][];
+            signals: components["schemas"]["SignalOut"][];
             /** Notes */
-            notes?: components["schemas"]["NoteOut"][];
+            notes: components["schemas"]["NoteOut"][];
         };
         /** UserOut */
         UserOut: {

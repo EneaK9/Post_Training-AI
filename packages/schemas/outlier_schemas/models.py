@@ -47,6 +47,8 @@ class Model(BaseModel):
         from_attributes=True,
         use_enum_values=False,
         extra="forbid",
+        # Every field is present when serialized, so generated client types are non-optional.
+        json_schema_serialization_defaults_required=True,
     )
 
 

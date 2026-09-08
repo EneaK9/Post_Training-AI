@@ -19,8 +19,22 @@ from outlier_schemas.enums import (
 from outlier_schemas.models import AdCopy, PreshipReport
 
 
-class Out(BaseModel):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True, serialize_by_alias=True)
+class Resp(BaseModel):
+    """Response models: every field is always present in output, so the OpenAPI schema marks
+    defaulted fields as required and the generated TypeScript types are non-optional."""
+
+    model_config = ConfigDict(
+        populate_by_name=True, serialize_by_alias=True, json_schema_serialization_defaults_required=True
+    )
+
+
+class Out(Resp):
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        serialize_by_alias=True,
+        json_schema_serialization_defaults_required=True,
+    )
 
 
 # ---- auth ----------------------------------------------------------------------------
@@ -37,7 +51,7 @@ class UserOut(Out):
 
 
 # ---- cards ---------------------------------------------------------------------------
-class CardStats(BaseModel):
+class CardStats(Resp):
     uses: int = 0
     measured: int = 0
     tier2_count: int = 0
@@ -346,7 +360,7 @@ class CopyEdit(BaseModel):
     cta: str
 
 
-class Paged(BaseModel):
+class Paged(Resp):
     total: int
     items: list[Any]
 
@@ -432,7 +446,7 @@ class AccountOut(Out):
 
 
 # ---- config --------------------------------------------------------------------------
-class ConfigOut(BaseModel):
+class ConfigOut(Resp):
     hash: str
     applied_by: str | None
     applied_at: datetime | None
@@ -448,7 +462,7 @@ class ConfigIn(BaseModel):
     note: str = ""
 
 
-class ConfigValidateOut(BaseModel):
+class ConfigValidateOut(Resp):
     ok: bool
     errors: list[str]
     hash: str | None
@@ -464,14 +478,14 @@ class ConfigVersionOut(Out):
 
 
 # ---- misc ----------------------------------------------------------------------------
-class SearchHit(BaseModel):
+class SearchHit(Resp):
     type: str
     id: UUID
     label: str
     sub: str = ""
 
 
-class SearchOut(BaseModel):
+class SearchOut(Resp):
     q: str
     hits: list[SearchHit]
 
@@ -497,7 +511,7 @@ class GenerateIn(BaseModel):
     seed: int = 0
 
 
-class GeneratedIdeaOut(BaseModel):
+class GeneratedIdeaOut(Resp):
     status: str
     trajectory: TrajectoryOut
     novelty_reason: str | None
@@ -505,7 +519,7 @@ class GeneratedIdeaOut(BaseModel):
     verifier_version: str
 
 
-class GenerateOut(BaseModel):
+class GenerateOut(Resp):
     brief_id: UUID
     episode_id: UUID | None
     batch_id: UUID | None
@@ -519,7 +533,7 @@ class GenerateOut(BaseModel):
     ideas: list[GeneratedIdeaOut]
 
 
-class ArchiveSampleOut(BaseModel):
+class ArchiveSampleOut(Resp):
     brief_id: UUID
     similar_brief_ids: list[UUID]
     excluded_holdout: int
@@ -527,19 +541,19 @@ class ArchiveSampleOut(BaseModel):
     items: list[dict[str, Any]]
 
 
-class PromptOut(BaseModel):
+class PromptOut(Resp):
     prompt: str
     trace: dict[str, Any]
 
 
-class ImportResult(BaseModel):
+class ImportResult(Resp):
     created: int = 0
     updated: int = 0
     skipped: int = 0
     errors: list[str] = Field(default_factory=list)
 
 
-class KillSwitchOut(BaseModel):
+class KillSwitchOut(Resp):
     shipping_enabled: bool
     reason: str
     changed_by: str
