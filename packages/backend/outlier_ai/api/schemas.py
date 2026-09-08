@@ -24,7 +24,9 @@ class Resp(BaseModel):
     defaulted fields as required and the generated TypeScript types are non-optional."""
 
     model_config = ConfigDict(
-        populate_by_name=True, serialize_by_alias=True, json_schema_serialization_defaults_required=True
+        populate_by_name=True,
+        serialize_by_alias=True,
+        json_schema_serialization_defaults_required=True,
     )
 
 

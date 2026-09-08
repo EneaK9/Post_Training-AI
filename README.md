@@ -25,7 +25,13 @@ make up               # postgres + minio
 make migrate
 make seed             # synthetic dataset
 make test
+make api             # FastAPI on :8000
+make web             # Next.js on :3000 (proxies /api to :8000)
+make e2e             # Playwright against a fresh stack on :8100/:3100
 ```
+
+Seeded users are `operator@example.com`, `researcher@example.com`, `expert@example.com`; set a
+password with `uv run oai users set-password --email expert@example.com`.
 
 The virtualenv is `venv/`, not `.venv/`. To use `uv run` directly instead of `make`, set
 `export UV_PROJECT_ENVIRONMENT=venv` in your shell. Reason: on macOS with iCloud-synced folders,

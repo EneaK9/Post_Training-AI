@@ -390,6 +390,141 @@ def openapi(
     console.print(f"[green]wrote[/green] {out}")
 
 
+jobs_app = typer.Typer(no_args_is_help=True, help="Jobs and the worker")
+episodes_app = typer.Typer(no_args_is_help=True, help="Episodes: ship, tick")
+fake_app = typer.Typer(no_args_is_help=True, help="Fake Meta account controls")
+app.add_typer(jobs_app, name="jobs")
+app.add_typer(episodes_app, name="episodes")
+app.add_typer(fake_app, name="fake")
+
+
+@jobs_app.command("run")
+def jobs_run(
+    kind: str = typer.Argument(
+        ..., help="sync_insights | sync_comments | episode_tick | recompute_outcomes"
+    ),
+) -> None:
+    """Run one job kind immediately (enqueue + process)."""
+    from outlier_ai.jobs.registry import enqueue
+    from outlier_ai.jobs.worker import run_once
+
+    async def _run():
+        async with dbmod.session_scope() as session:
+            await enqueue(session, kind, key=f"cli:{kind}", payload={})
+        return await run_once()
+
+    n = asyncio.run(_run())
+    console.print(f"[green]processed {n} job(s)[/green]")
+
+
+@jobs_app.command("worker")
+def jobs_worker(poll_seconds: float = typer.Option(30.0)) -> None:
+    """Run the worker loop (daily cadence + due jobs)."""
+    from outlier_ai.jobs.worker import serve
+
+    asyncio.run(serve(poll_seconds))
+
+
+@jobs_app.command("list")
+def jobs_list(limit: int = 20) -> None:
+    from sqlalchemy import select
+
+    from outlier_ai.models.ops import Job
+
+    async def _run():
+        async with dbmod.session_scope() as session:
+            return (
+                (await session.execute(select(Job).order_by(Job.scheduled_for.desc()).limit(limit)))
+                .scalars()
+                .all()
+            )
+
+    table = Table(title="jobs")
+    for col in ("kind", "key", "state", "attempts", "scheduled", "error"):
+        table.add_column(col)
+    for j in asyncio.run(_run()):
+        table.add_row(
+            j.kind,
+            j.key,
+            j.state,
+            str(j.attempts),
+            j.scheduled_for.isoformat(timespec="minutes"),
+            (j.last_error or "")[:60],
+        )
+    console.print(table)
+
+
+@episodes_app.command("ship")
+def episodes_ship(
+    batch: str = typer.Argument(..., help="batch uuid; ships every run-labeled idea"),
+) -> None:
+    """Ship a batch's approved ideas through the account's client (fake or real)."""
+    import uuid as _uuid
+
+    from outlier_ai.core.config import load_file_config
+    from outlier_ai.core.storage import get_storage
+    from outlier_ai.meta.factory import client_for_account
+    from outlier_ai.meta.ship import ship_batch
+    from outlier_ai.models.episodes import Batch, SearchEpisode
+    from outlier_ai.models.meta import AdAccount
+
+    async def _run():
+        cfg = load_file_config()
+        async with dbmod.session_scope() as session:
+            b = await session.get(Batch, _uuid.UUID(batch))
+            if b is None:
+                raise typer.BadParameter("batch not found")
+            ep = await session.get(SearchEpisode, b.episode_id)
+            acc = (
+                await session.get(AdAccount, ep.ad_account_id) if ep and ep.ad_account_id else None
+            )
+            if ep is None or acc is None:
+                raise typer.BadParameter("episode has no ad account")
+            client = await client_for_account(session, acc, cfg, require_shippable=True)
+            return await ship_batch(
+                session, b.id, client=client, storage=get_storage(), cfg=cfg, actor="cli"
+            )
+
+    results = asyncio.run(_run())
+    for r in results:
+        console.print(f"{r.trajectory_id}: shipped {len(r.shipped_render_ids)} renders {r.skipped}")
+
+
+@episodes_app.command("tick")
+def episodes_tick() -> None:
+    """Run the controller once for every searching episode."""
+    from outlier_ai.core.config import load_file_config
+    from outlier_ai.jobs.handlers import run_episode_tick
+
+    async def _run():
+        async with dbmod.session_scope() as session:
+            return await run_episode_tick(session, load_file_config())
+
+    for r in asyncio.run(_run()):
+        console.print(r)
+
+
+@fake_app.command("advance")
+def fake_advance(days: int = typer.Option(1), account: str = typer.Option("act_fake_1")) -> None:
+    """Advance the fake Meta clock (resolves reviews, emits insights and comments)."""
+    from sqlalchemy import select
+
+    from outlier_ai.core.config import load_file_config
+    from outlier_ai.meta.factory import client_for_account
+    from outlier_ai.models.meta import AdAccount
+
+    async def _run():
+        cfg = load_file_config()
+        async with dbmod.session_scope() as session:
+            acc = (
+                await session.execute(select(AdAccount).where(AdAccount.meta_account_id == account))
+            ).scalar_one()
+            client = await client_for_account(session, acc, cfg)
+            return await client.advance_days(days)  # type: ignore[attr-defined]
+
+    console.print(f"fake clock now {asyncio.run(_run())}")
+
+
 @app.command("env")
 def env() -> None:
     """Show non-secret settings."""

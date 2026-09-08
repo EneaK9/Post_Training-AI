@@ -67,7 +67,7 @@ test.describe("Data screen", () => {
     await page.getByTestId("name-slug").fill(slug);
     await page.getByTestId("name-definition").fill("A pairing that keeps working on this account.");
     await page.getByTestId("name-save").click();
-    await expect(rows.first()).toContainText("named");
+    await expect(rows.filter({ hasText: "named" }).first()).toBeVisible();
     await page.getByTestId("tab-board").click();
     await expect(page.getByTestId("playbook-column").getByTestId(`card-${slug}`)).toBeVisible();
   });
@@ -76,7 +76,7 @@ test.describe("Data screen", () => {
     await login(page, "operator");
     const first = page.getByTestId("history-column").getByTestId("trajectory-card").first();
     await first.getByTestId("action-wrong-cards").click();
-    await page.getByRole("checkbox").first().check();
+    await page.getByRole("dialog").getByRole("checkbox").first().check();
     await page.getByTestId("confirm-wrong-cards").click();
     await expect(first).toContainText("wrong cards");
     await page.getByTestId("tab-audit").click();

@@ -20,7 +20,6 @@ from outlier_ai.api.routers import (
     config,
     episodes,
     eval,
-    files,
     generate,
     imports,
     meta,

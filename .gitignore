@@ -31,6 +31,7 @@ frontend/.next/
 frontend/out/
 frontend/playwright-report/
 frontend/test-results/
+frontend/.next/types/
 
 # OS / editors
 .DS_Store

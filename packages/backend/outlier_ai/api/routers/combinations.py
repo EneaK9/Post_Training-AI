@@ -24,13 +24,13 @@ async def list_combinations(
         (await db.execute(select(Combination).where(Combination.uses >= min_uses))).scalars().all()
     )
     if sort == "uses":
-        rows = sorted(rows, key=lambda c: -c.uses)
+        rows = sorted(rows, key=lambda c: (-c.uses, str(c.id)))
     elif sort == "recent":
         rows = sorted(
             rows, key=lambda c: c.last_used.timestamp() if c.last_used else 0, reverse=True
         )
     else:
-        rows = sorted(rows, key=lambda c: ((c.tier2_rate or 0.0), c.uses), reverse=True)
+        rows = sorted(rows, key=lambda c: (-(c.tier2_rate or 0.0), -c.uses, str(c.id)))
     return [combination_out(c, cards) for c in rows[:limit]]
 
 

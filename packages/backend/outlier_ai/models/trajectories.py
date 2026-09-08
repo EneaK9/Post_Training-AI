@@ -112,6 +112,10 @@ class Render(Base):
     effective_object_story_id: Mapped[str | None] = mapped_column(String(128))
     status: Mapped[str] = enum_col(default="draft", index=True)
     rejection_reason: Mapped[str | None] = mapped_column(Text)
+    # Controller bookkeeping: which stage the ad is in and what it is allowed to spend per day.
+    phase: Mapped[str] = enum_col(default="screening")  # screening | scale
+    daily_budget_usd: Mapped[float | None] = mapped_column(Float)
+    scale_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     shipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     stopped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at_col()

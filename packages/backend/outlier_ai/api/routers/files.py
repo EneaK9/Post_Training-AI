@@ -19,4 +19,8 @@ async def get_file(key: str, _: CurrentUser) -> Response:
     if ".." in key or key.startswith("/") or not storage.exists(key):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "file not found")
     media_type = mimetypes.guess_type(key)[0] or "application/octet-stream"
-    return Response(content=storage.get(key), media_type=media_type, headers={"Cache-Control": "private, max-age=3600"})
+    return Response(
+        content=storage.get(key),
+        media_type=media_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )

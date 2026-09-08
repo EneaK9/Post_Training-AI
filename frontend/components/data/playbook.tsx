@@ -93,8 +93,8 @@ export function PlaybookColumn() {
           </div>
         ))}
       </div>
-      <CardEditor open={adding} onClose={() => setAdding(false)} />
-      <CardEditor open={!!editing} card={editing ?? undefined} onClose={() => setEditing(null)} />
+      {adding && <CardEditor open onClose={() => setAdding(false)} />}
+      {editing && <CardEditor key={editing.id} open card={editing} onClose={() => setEditing(null)} />}
     </Panel>
   );
 }
