@@ -1,0 +1,14 @@
+# Category medians used as the baseline fallback when an account has fewer than
+# `outlier.baseline_min_ads` ads with scale data. Updated quarterly (spec section 4).
+# ROAS is revenue / spend; CTR is link clicks / impressions.
+updated_at: 2026-09-01
+categories:
+  skincare:           { roas: 2.4, ctr: 0.014 }
+  supplements:        { roas: 2.1, ctr: 0.012 }
+  fitness_equipment:  { roas: 2.8, ctr: 0.011 }
+  apparel:            { roas: 2.6, ctr: 0.015 }
+  home_goods:         { roas: 2.3, ctr: 0.010 }
+  pet_food:           { roas: 2.9, ctr: 0.013 }
+  coffee:             { roas: 2.2, ctr: 0.012 }
+  saas_tools:         { roas: 1.8, ctr: 0.009 }
+  default:            { roas: 2.3, ctr: 0.012 }

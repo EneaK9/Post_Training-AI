@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: outlier
+          POSTGRES_PASSWORD: outlier
+          POSTGRES_DB: outlier_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U outlier -d outlier_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      UV_PROJECT_ENVIRONMENT: venv
+      TEST_DATABASE_URL: postgresql+asyncpg://outlier:outlier@localhost:5432/outlier_test
+      DATABASE_URL: postgresql+asyncpg://outlier:outlier@localhost:5432/outlier_test
+      DRY_RUN: "true"
+      STORAGE_BACKEND: local
+      PII_HMAC_KEY: ci-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --all-packages
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run pytest -m "not slow and not contract" -q --cov=packages --cov-report=term-missing
+
+  # frontend and playwright jobs are added in Phase 3 once frontend/ exists.

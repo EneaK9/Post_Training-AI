@@ -1,0 +1,114 @@
+# Outlier AI configuration. Every value here is a starting point (spec section 7.3).
+# Edit on the Model screen or here; each applied version is stored with a hash that
+# runs, episodes, and trajectories pin. Changing `outlier:` recomputes tiers from raw rows.
+version: 1
+
+outlier:
+  tier_multiples: { tier1: 1.5, tier2: 3.0, tier3: 10.0 }   # multiples of account median ROAS at scale
+  tier_rewards: { tier0: 0.0, tier1: 0.0, tier2: 1.0, tier3: 1.0 }
+  baseline_window_days: 90
+  baseline_min_ads: 20               # below this the category fallback is used
+  min_purchases_at_scale: 30         # volume gate
+  durability_days: 7                 # tier must hold this many consecutive days at scale spend
+  bootstrap_samples: 2000
+  bootstrap_confidence: 0.90         # lower bound of the ROAS ratio must clear the tier
+  screening:
+    ctr_multiple: 1.5                # ctr_lower_bound >= 1.5 x account median CTR
+    min_impressions: 5000
+    window_days: 7
+    confidence: 0.95
+  category_medians_file: category_medians.yaml
+
+episode:
+  default_budget_cap_usd: 5000
+  screening_budget_per_ad_usd: 20
+  scale_budget_per_ad_usd: 100
+  screening_days: 7
+  scale_days: 7
+  renders_per_idea: 3
+  ideas_per_batch: 4
+  max_batches: 6
+  overlap_batches: true              # next batch may start once the previous batch's screening resolves
+  review_poll_minutes: 30
+  keep_running_after_outlier: false
+
+archive:
+  n_elite: 8                         # best trajectory per niche, top niches
+  n_rare: 3                          # from rarely used niches
+  novelty_threshold: 0.12            # cosine distance below which an idea is a duplicate
+  niche_projection: strategy_only    # full_combination | strategy_only | strategy_plus_style
+  history_days: 90
+  similar_brief_min_cosine: 0.75
+  embedding_model: BAAI/bge-small-en-v1.5
+  embedding_dims: 384
+
+generation:
+  k: 8
+  typicality_prompting: true         # ask for a labeled set: common | uncommon | rare
+  weights: instruct                  # base | instruct (LocalPolicy)
+  max_prompt_tokens: 24000
+  temperature: 1.0
+  default_backend: fake              # fake | anthropic | local
+  anthropic_model: claude-sonnet-5
+  local_model: Qwen/Qwen3-8B
+  local_base_model: Qwen/Qwen3-8B-Base
+  vllm_url: http://localhost:8000/v1
+  min_cards_per_idea: 2
+
+verifier:
+  kind: llm                          # llm | classifier (classifier once expert labels > classifier_min_labels)
+  model: claude-sonnet-5
+  few_shot_n: 12
+  classifier_min_labels: 500
+
+reward_model:
+  lambda_pess: 1.0                   # rm_score = mean - lambda_pess * std
+  heads: 3
+  cold_until_positives: 50           # rm_cold (expert labels) until rm_outcome has this many tier 2+
+  focal_gamma: 2.0
+  gold_gap_threshold: 0.15           # proxy vs real drift that pauses Loop B
+  judge_model: claude-sonnet-5
+
+rl:
+  k: 32
+  tau_start: 0.1                     # exponential utility temperature, annealed low -> target
+  tau_target: 1.0
+  tau_anneal_steps: 200
+  eps_mean: 0.1                      # mix of mean-advantage to keep gradients non-degenerate
+  beta: 0.5                          # uniqueness scaling exponent on 1/cluster_size
+  kl_coef: 0.05
+  clip_eps: 0.2
+  tag_penalty: 0.2
+  format_penalty: 0.5
+  shaping_weight: 0.3                # rm_score weight when outcome is null; decays to 0
+  learning_rate: 1.0e-5
+  lora: { r: 16, alpha: 32, dropout: 0.05 }
+  guards:
+    swing_rate_min: 0.15             # fraction of rollouts labeled uncommon|rare must stay above this
+    entropy_floor: 0.6
+    max_steps_between_outcomes: 50
+  min_tier2_trajectories_to_start: 50
+
+meta:
+  api_version: v26.0
+  permissions: [ads_management, ads_read, pages_show_list, pages_read_user_content]
+  attribution_setting: 7d_click_1d_view
+  insights_sync_hour_utc: 6
+  comments_sync_hour_utc: 7
+  daily_account_cap_usd: 500         # hard cap enforced by the budget governor, independent of episodes
+  action_types:
+    reactions: post_reaction
+    comments: comment
+    shares: post
+    saves: onsite_conversion.post_save
+
+images:
+  mode: brand_assets                 # generate | brand_assets
+  sizes: [[1080, 1080], [1080, 1350]]
+  primary_text_warn_chars: 125
+  headline_warn_chars: 40
+  description_warn_chars: 30
+
+signals:
+  extraction_model: claude-sonnet-5
+  min_comments_for_theme: 2

@@ -1,0 +1,75 @@
+name: outlier-ai
+
+services:
+  postgres:
+    # Match the Neon project's major version (PG18 is Neon's default for new projects).
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_USER: outlier
+      POSTGRES_PASSWORD: outlier
+      POSTGRES_DB: outlier
+    ports:
+      # Host port 5433 so a locally installed Postgres on 5432 never shadows the container.
+      # (On macOS `localhost` resolves to ::1 first, where a Homebrew Postgres may listen, while
+      # Docker only binds IPv4; always connect via 127.0.0.1:5433.)
+      - "127.0.0.1:5433:5432"
+    volumes:
+      # PG18+ images require the mount at /var/lib/postgresql (data lives in a versioned subdir).
+      - pgdata:/var/lib/postgresql
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outlier -d outlier"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minio minio12345 &&
+      mc mb --ignore-existing local/outlier-ai &&
+      echo bucket ready"
+
+  vllm:
+    # Optional local policy server for the LocalPolicy backend. Requires an NVIDIA GPU host.
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:latest
+    command: >
+      --model Qwen/Qwen3-8B
+      --enable-lora
+      --max-model-len 32768
+      --port 8000
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  pgdata:
+  miniodata:
