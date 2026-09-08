@@ -1561,32 +1561,29 @@ version = "0.1.0"
 source = { editable = "packages/backend" }
 dependencies = [
     { name = "alembic" },
+    { name = "argon2-cffi" },
     { name = "asyncpg" },
     { name = "boto3" },
     { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "jinja2" },
     { name = "numpy" },
     { name = "outlier-schemas" },
     { name = "pgvector" },
+    { name = "pillow" },
     { name = "pydantic-settings" },
+    { name = "python-multipart" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "typer" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.optional-dependencies]
-api = [
-    { name = "argon2-cffi" },
-    { name = "fastapi" },
-    { name = "python-multipart" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-images = [
-    { name = "pillow" },
-]
 llm = [
     { name = "anthropic" },
-    { name = "httpx" },
 ]
 meta = [
     { name = "facebook-business" },
@@ -1601,29 +1598,30 @@ signals = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
-    { name = "anthropic", marker = "extra == 'llm'", specifier = ">=0.40" },
-    { name = "argon2-cffi", marker = "extra == 'api'", specifier = ">=23" },
+    { name = "anthropic", marker = "extra == 'llm'", specifier = ">=1.0" },
+    { name = "argon2-cffi", specifier = ">=23" },
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "boto3", specifier = ">=1.35" },
     { name = "cryptography", specifier = ">=43" },
     { name = "facebook-business", marker = "extra == 'meta'", specifier = ">=21" },
-    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115" },
-    { name = "httpx", marker = "extra == 'llm'", specifier = ">=0.27" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "jinja2", specifier = ">=3.1" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "outlier-schemas", editable = "packages/schemas" },
     { name = "pgvector", specifier = ">=0.3.6" },
-    { name = "pillow", marker = "extra == 'images'", specifier = ">=10.4" },
+    { name = "pillow", specifier = ">=10.4" },
     { name = "presidio-analyzer", marker = "extra == 'signals'", specifier = ">=2.2.360" },
     { name = "pydantic-settings", specifier = ">=2.5" },
-    { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.9" },
+    { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.8" },
     { name = "sentence-transformers", marker = "extra == 'ml'", specifier = ">=3.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
     { name = "typer", specifier = ">=0.12" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.30" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
-provides-extras = ["ml", "llm", "api", "meta", "signals", "images"]
+provides-extras = ["ml", "llm", "meta", "signals"]
 
 [[package]]
 name = "outlier-ai-workspace"

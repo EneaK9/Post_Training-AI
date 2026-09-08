@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f7f5;
+  --foreground: #16181d;
+  --panel: #ffffff;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #2f5bea;
+  --accent-soft: #e8edfd;
+  --tier0: #9ca3af;
+  --tier1: #f59e0b;
+  --tier2: #16a34a;
+  --tier3: #7c3aed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e1014;
+    --foreground: #e8eaef;
+    --panel: #161920;
+    --muted: #9aa1ad;
+    --line: #262a33;
+    --accent: #6f8cff;
+    --accent-soft: #1d2540;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.tier-0 { background: var(--tier0); color: white; }
+.tier-1 { background: var(--tier1); color: white; }
+.tier-2 { background: var(--tier2); color: white; }
+.tier-3 { background: var(--tier3); color: white; }

@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     fernet_key: str | None = None
     pii_hmac_key: str = "dev-only-not-secret"
 
+    # hash: deterministic feature hashing (tests, dev). sentence_transformers needs the `ml` extra.
+    embedder: Literal["hash", "sentence_transformers"] = "hash"
+
     storage_backend: Literal["local", "s3"] = "local"
     local_storage_dir: Path = Path(".storage")
     s3_endpoint: str | None = None

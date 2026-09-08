@@ -11,13 +11,22 @@ from outlier_schemas.config import ScreeningConfig
 
 
 class EngagementRow(Protocol):
-    impressions: int
-    link_clicks: int
-    spend: float
-    reactions: int
-    comments: int
-    shares: int
-    saves: int
+    """Read-only view of one day's counts; frozen dataclasses and ORM rows both satisfy it."""
+
+    @property
+    def impressions(self) -> int: ...
+    @property
+    def link_clicks(self) -> int: ...
+    @property
+    def spend(self) -> float: ...
+    @property
+    def reactions(self) -> int: ...
+    @property
+    def comments(self) -> int: ...
+    @property
+    def shares(self) -> int: ...
+    @property
+    def saves(self) -> int: ...
 
 
 @dataclass(frozen=True)

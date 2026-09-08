@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Sequence
+from itertools import pairwise
 from typing import Protocol
 
 import numpy as np
@@ -37,7 +38,7 @@ class HashEmbedder:
         out = np.zeros((len(texts), self.dims), dtype=np.float32)
         for i, text in enumerate(texts):
             toks = _TOKEN.findall(text.lower())
-            grams = toks + [f"{a}_{b}" for a, b in zip(toks, toks[1:], strict=False)]
+            grams = toks + [f"{a}_{b}" for a, b in pairwise(toks)]
             for g in grams:
                 h = int.from_bytes(hashlib.blake2b(g.encode(), digest_size=8).digest(), "big")
                 idx = h % self.dims

@@ -18,8 +18,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from outlier_ai.archive.combinations import combination_key, niche_key
+from outlier_ai.archive.novelty import embed_combo_angle
 from outlier_ai.core.config import ConfigStore, load_file_config
 from outlier_ai.core.crypto import hash_identity
+from outlier_ai.core.embeddings import HashEmbedder
 from outlier_ai.models import Base
 from outlier_ai.models.auth import User
 from outlier_ai.models.briefs import Brief
@@ -115,6 +117,7 @@ async def seed(
     cfg = config or load_file_config()
     now = now or datetime.now(UTC)
     summary = SeedSummary()
+    embedder = HashEmbedder(cfg.archive.embedding_dims)
 
     if truncate:
         await truncate_all(session)
@@ -180,6 +183,7 @@ async def seed(
             constraints=data["constraints"],
             brand_assets=[],
             raw_text=data["raw_text"],
+            embedding=embedder.embed([data["raw_text"]])[0].tolist(),
             # world_state_tag is what the latent model keys on; the fake client reads it here.
             meta={**data["meta"], "world_state_tag": data["world_state_tag"]},
         )
@@ -258,6 +262,11 @@ async def seed(
             angle=idea["angle"],
             ad_copy=idea["copy"],
             visual_brief=idea["visual_brief"],
+            combo_angle_embedding=embed_combo_angle(
+                embedder,
+                [sp.slug for sp in specs if card_rows[sp.slug].id in verified],
+                idea["angle"],
+            ),
             library_version=1,
             config_hash=cfg.hash,
             created_at=start,

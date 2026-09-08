@@ -56,6 +56,12 @@ test-unit: ## Unit tests only
 test-slow: ## Simulator experiments and trainer smoke
 	uv run pytest -m slow -q
 
+api: ## Run the API on 127.0.0.1:8000 with reload
+	uv run oai serve --reload
+
+openapi: ## Export OpenAPI schema for the frontend
+	uv run oai openapi
+
 check: lint typecheck test ## Everything CI runs
 
-.PHONY: help install up down reset-db migrate migration seed lint fmt typecheck test test-unit test-slow check
+.PHONY: help install up down reset-db migrate migration seed lint fmt typecheck test test-unit test-slow api openapi check

@@ -99,7 +99,9 @@ class GenerationConfig(_Cfg):
     max_prompt_tokens: int = Field(default=24000, ge=2000)
     temperature: float = Field(default=1.0, ge=0.0, le=2.0)
     default_backend: BackendKind = BackendKind.fake
-    anthropic_model: str = "claude-sonnet-5"
+    anthropic_model: str = "claude-opus-5"
+    anthropic_effort: str = Field(default="high", pattern=r"^(low|medium|high|xhigh|max)$")
+    anthropic_fallbacks: bool = True
     local_model: str = "Qwen/Qwen3-8B"
     local_base_model: str = "Qwen/Qwen3-8B-Base"
     vllm_url: str = "http://localhost:8000/v1"

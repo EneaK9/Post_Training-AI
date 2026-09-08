@@ -24,6 +24,9 @@ NAMING = {
 
 
 class Base(DeclarativeBase):
+    # Fetch server defaults (created_at, updated_at) with RETURNING so no lazy refresh is
+    # needed after flush; lazy loads are not allowed in the async session.
+    __mapper_args__ = {"eager_defaults": True}
     metadata = MetaData(naming_convention=NAMING)
     type_annotation_map = {
         dict[str, Any]: JSONB,
