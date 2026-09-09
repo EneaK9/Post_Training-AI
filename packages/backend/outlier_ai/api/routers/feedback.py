@@ -73,8 +73,11 @@ async def retrain_rm(
         seed=body.seed,
     )
     if res is None:
+        g = cfg.reward_model
         return RMTrainOut(
-            trained=False, reason="not enough labeled rows (need 20 rows with 3+ of each class)"
+            trained=False,
+            reason=f"not enough labeled rows: need {g.min_rows} rows with {g.min_per_class}+ of "
+            "each class; the cold reward model stays in use",
         )
     return RMTrainOut(
         trained=True,
@@ -82,5 +85,12 @@ async def retrain_rm(
         kind=res.kind.value,
         n_rows=res.n_rows,
         n_positive=res.n_positive,
-        metrics={"train": res.report.__dict__, "calibration": res.calibration.__dict__},
+        metrics={
+            "train": res.report.__dict__,
+            "calibration": res.calibration.__dict__,
+            "val_auc": res.val_auc,
+            "activated": res.activated,
+            "note": res.note,
+        },
+        reason=res.note or None,
     )

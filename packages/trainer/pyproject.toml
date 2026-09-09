@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# GPU stack. Install on the training box only: `uv sync --package outlier-trainer --extra train`.
+# GPU stack. Install on the training box only: `uv sync --all-packages --extra train`.
 train = [
   "torch>=2.4",
   "transformers>=4.45",

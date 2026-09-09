@@ -185,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "status": "failed",
                 "error": f"training dependencies missing: {e}. "
-                "Install with `uv sync --package outlier-trainer --extra train`.",
+                "Install with `uv sync --all-packages --extra train`.",
             }
         )
     except Exception as e:

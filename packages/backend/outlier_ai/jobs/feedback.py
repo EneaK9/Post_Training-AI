@@ -7,7 +7,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import combinations
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 from sqlalchemy import select
@@ -213,7 +213,9 @@ async def retrain_verifier(
             ]
         )
     )
-    version = f"verifier-classifier-v2-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+    version = (
+        f"verifier-classifier-v2-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:6]}"
+    )
     uri = storage.put(
         f"models/verifier/{version}.npz", model.to_bytes(), "application/octet-stream"
     )

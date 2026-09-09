@@ -692,6 +692,7 @@ def rm_train(
     kind: str | None = typer.Option(None, help="rm_cold | rm_outcome (auto when omitted)"),
     activate: bool = typer.Option(True),
     seed: int = typer.Option(0),
+    force: bool = typer.Option(False, help="activate even if the held-out AUC guard fails"),
 ) -> None:
     """Train the ensemble reward model on the current archive."""
 
@@ -715,9 +716,13 @@ def rm_train(
                 kind=RewardModelKind(kind) if kind else None,
                 activate=activate,
                 seed=seed,
+                force=force,
             )
         if res is None:
-            typer.echo("not enough labeled rows to train (need 20 rows with 3+ of each class)")
+            typer.echo(
+                "not enough labeled rows to train: see reward_model.min_rows / min_per_class; "
+                "the cold reward model stays in use"
+            )
             raise typer.Exit(1)
         typer.echo(
             json.dumps(
@@ -726,6 +731,9 @@ def rm_train(
                     "kind": res.kind.value,
                     "n_rows": res.n_rows,
                     "n_positive": res.n_positive,
+                    "val_auc": res.val_auc,
+                    "activated": res.activated,
+                    "note": res.note,
                     "train": res.report.__dict__,
                     "calibration": res.calibration.__dict__,
                 },
@@ -733,6 +741,38 @@ def rm_train(
                 default=str,
             )
         )
+
+    asyncio.run(_run())
+
+
+@rm_app.command("rescore")
+def rm_rescore(
+    limit: int | None = typer.Option(None, help="only the newest N open ideas"),
+    judges: bool = typer.Option(
+        True, help="use the Claude cold reward model when no ensemble qualifies"
+    ),
+) -> None:
+    """Re-score queued ideas with the reward model the generator would use right now."""
+
+    async def _run() -> None:
+        from outlier_ai.core.embeddings import get_embedder
+        from outlier_ai.core.storage import get_storage
+        from outlier_ai.generation.backends import get_judge
+        from outlier_ai.reward.cold import HeuristicColdRewardModel, LLMColdRewardModel
+        from outlier_ai.reward.train import load_active_reward_model, rescore_open_ideas
+
+        s = get_settings()
+        async with dbmod.session_scope() as session:
+            cfg = await ConfigStore(session).current()
+            embedder = get_embedder(
+                s, dims=cfg.archive.embedding_dims, model_name=cfg.archive.embedding_model
+            )
+            rm = await load_active_reward_model(session, get_storage(s), embedder, cfg)
+            if rm is None:
+                judge = get_judge(cfg, s, model=cfg.reward_model.judge_model) if judges else None
+                rm = LLMColdRewardModel(judge) if judge else HeuristicColdRewardModel()
+            n = await rescore_open_ideas(session, cfg=cfg, reward_model=rm, limit=limit)
+        typer.echo(f"rescored {n} open ideas with {rm.version}")
 
     asyncio.run(_run())
 

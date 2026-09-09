@@ -122,6 +122,10 @@ class RewardModelConfig(_Cfg):
     focal_gamma: float = Field(default=2.0, ge=0)
     gold_gap_threshold: float = Field(default=0.15, gt=0)
     judge_model: str = "claude-sonnet-5"
+    # activation guards: below these the cold reward model stays in use
+    min_rows: int = Field(default=50, ge=10)
+    min_per_class: int = Field(default=10, ge=2)
+    min_val_auc: float = Field(default=0.6, ge=0.5, le=1.0)
 
 
 class LoraConfig(_Cfg):

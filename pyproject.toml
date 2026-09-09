@@ -6,6 +6,12 @@ requires-python = ">=3.12,<3.14"
 # The root depends on every member so `uv sync` / `uv run` keep them all installed.
 dependencies = ["outlier-schemas", "outlier-ai", "outlier-trainer"]
 
+# Root extras forward to member extras so one `uv sync --all-packages --extra <name>` keeps the
+# whole workspace installed and adds the optional stack.
+[project.optional-dependencies]
+llm = ["outlier-ai[llm]"]        # Anthropic SDK for the API generator, judges, extraction
+train = ["outlier-trainer[train]"]  # GPU stack for Loop B
+
 [tool.uv]
 package = false
 default-groups = ["dev"]

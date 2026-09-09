@@ -49,6 +49,7 @@ Everything below runs against the synthetic archive; nothing here gates Loop A.
 uv run oai archive export                      # Parquet snapshot -> object storage, row in archive_snapshots
 uv run oai rm train                            # ensemble reward model (rm_cold from expert labels, rm_outcome once 50 tier 2+)
 uv run oai rm gold-gap                         # proxy-vs-real drift; a trip pauses queued training runs
+uv run oai rm rescore                          # re-score queued ideas with the reward model in use
 uv run oai train launch rft --dry              # snapshot + training_runs row + trainer subprocess (counts only)
 uv run oai train launch rft --smoke            # a few real steps; needs the `train` extra (GPU box)
 uv run oai train launch grpo_onpolicy --simulator   # the literal 7.3 loop, gated to the simulator
@@ -61,11 +62,14 @@ Trainer stages (`packages/trainer/outlier_trainer`): `rft` (SFT on tier 2+), `dp
 on the same brief), `grpo_offpolicy` (custom loop over archived completions with the section 7.3
 advantage transform, clipped sequence ratios, KL to a reference refreshed only at run boundaries),
 `grpo_onpolicy` (TRL `GRPOTrainer` subclass; RM-shaped reward, so it only runs with `--simulator` or
-`--allow-rm-reward`). Install GPU dependencies with `uv sync --package outlier-trainer --extra train`.
+`--allow-rm-reward`). Install GPU dependencies with `uv sync --all-packages --extra train`; the Anthropic SDK with `--extra llm`.
 The Model screen exposes the same actions to researchers: Launch run (dry / smoke / full), Run eval,
 Train reward model, plus the gold-gap badge.
 
 ## Status of the simulator gate (honest reading)
+
+What to do about it, and everything else that comes next, is in [docs/next_steps.md](docs/next_steps.md).
+
 
 `oai experiments loop-a-vs-random --briefs 8 --seeds 1,2,3 --history 250 --cap 2000 --max-days 110`
 (24 runs per arm, 2026-09-08):

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 from sqlalchemy import select
@@ -42,6 +42,20 @@ class RMTrainResult:
     calibration: CalibrationReport
     n_rows: int
     n_positive: int
+    val_auc: float | None = None
+    activated: bool = False
+    note: str = ""
+
+
+def meets_activation_guards(cfg: AppConfig, n_rows: int, n_positive: int) -> str | None:
+    """Reason the data is too thin to trust a trained ensemble, or None when it qualifies."""
+    g = cfg.reward_model
+    n_negative = n_rows - n_positive
+    if n_rows < g.min_rows:
+        return f"{n_rows} rows < min_rows {g.min_rows}"
+    if n_positive < g.min_per_class or n_negative < g.min_per_class:
+        return f"{n_positive} positive / {n_negative} negative < min_per_class {g.min_per_class}"
+    return None
 
 
 async def _features_for(
@@ -144,7 +158,10 @@ async def train_reward_model(
     kind: RewardModelKind | None = None,
     activate: bool = True,
     seed: int = 0,
+    force: bool = False,
 ) -> RMTrainResult | None:
+    """Train the ensemble on the labeled archive. Activation needs the held-out AUC guard unless
+    `force` is set (a researcher choosing to try the model anyway; the note is still recorded)."""
     from outlier_ai.archive.combinations import load_cards_by_id
 
     cards_by_id = await load_cards_by_id(session)
@@ -156,11 +173,34 @@ async def train_reward_model(
             else RewardModelKind.rm_cold
         )
     trajs, y = await build_dataset(session, kind)
-    if len(trajs) < 20 or y.sum() < 3 or (len(y) - y.sum()) < 3:
+    if meets_activation_guards(cfg, len(trajs), int(y.sum())) is not None:
         return None
     fb = FeatureBuilder(embedder)
     x = fb.build(await _features_for(session, trajs, cards_by_id))
-    version = f"{kind.value}-ens-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+    # timestamp plus a short random suffix: two trainings in the same second must not collide
+    version = f"{kind.value}-ens-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:6]}"
+    # held-out check first: a model that cannot rank unseen labeled ideas must not steer the queue
+    rng = np.random.default_rng(seed)
+    order = rng.permutation(len(y))
+    n_val = max(4, len(y) // 5)
+    val_idx, tr_idx = order[:n_val], order[n_val:]
+    val_auc: float | None = None
+    if y[tr_idx].sum() >= 2 and (len(tr_idx) - y[tr_idx].sum()) >= 2 and len(set(y[val_idx])) == 2:
+        ens_v, _ = train_ensemble(
+            x[tr_idx],
+            y[tr_idx],
+            heads=cfg.reward_model.heads,
+            gamma=cfg.reward_model.focal_gamma,
+            seed=seed,
+        )
+        mean_v, _ = ens_v.score(x[val_idx])
+        val_auc = calibration(mean_v, y[val_idx]).auc
+    note = ""
+    if val_auc is None:
+        note = "no held-out AUC (validation split lacked both classes)"
+    elif val_auc < cfg.reward_model.min_val_auc:
+        note = f"held-out AUC {val_auc:.2f} < min_val_auc {cfg.reward_model.min_val_auc}"
+    activate = activate and (force or not note)
     ens, report = train_ensemble(
         x,
         y,
@@ -194,6 +234,8 @@ async def train_reward_model(
                 "calibration": asdict(cal),
                 "n_rows": len(trajs),
                 "n_positive": int(y.sum()),
+                "val_auc": val_auc,
+                "note": note,
             },
         )
     )
@@ -206,6 +248,9 @@ async def train_reward_model(
         calibration=cal,
         n_rows=len(trajs),
         n_positive=int(y.sum()),
+        val_auc=val_auc,
+        activated=activate,
+        note=note,
     )
 
 
@@ -227,7 +272,7 @@ class EnsembleRewardModel:
 
 
 async def load_active_reward_model(
-    session: AsyncSession, storage: Storage, embedder: Embedder
+    session: AsyncSession, storage: Storage, embedder: Embedder, cfg: AppConfig | None = None
 ) -> EnsembleRewardModel | None:
     row = (
         (
@@ -242,6 +287,10 @@ async def load_active_reward_model(
     )
     if row is None or not row.artifact_uri:
         return None
+    if cfg is not None and meets_activation_guards(
+        cfg, int(row.metrics.get("n_rows", 0)), int(row.metrics.get("n_positive", 0))
+    ):
+        return None  # trained on too little data for the current guards: stay on the cold model
     ens = Ensemble.from_bytes(storage.get(key_from_uri(row.artifact_uri)))
     if ens.meta.get("embedder") != embedder.name:
         return None  # features would not line up
@@ -279,3 +328,41 @@ def positives_count(y: np.ndarray) -> int:
 
 def uuid_list(ids: list[UUID]) -> list[str]:
     return [str(i) for i in ids]
+
+
+async def open_ideas(session: AsyncSession) -> list[Trajectory]:
+    """Ideas still in the review queue: format ok, not reviewed, no shipped render."""
+    from outlier_ai.models.trajectories import Render
+
+    shipped = select(Render.trajectory_id).where(Render.shipped_at.is_not(None))
+    reviewed = select(Review.trajectory_id)
+    stmt = (
+        select(Trajectory)
+        .where(
+            Trajectory.format_ok.is_(True),
+            Trajectory.id.not_in(shipped),
+            Trajectory.id.not_in(reviewed),
+        )
+        .order_by(Trajectory.created_at.desc())
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def rescore_open_ideas(
+    session: AsyncSession, *, cfg: AppConfig, reward_model, limit: int | None = None
+) -> int:
+    """Re-score queued ideas with the given reward model so the review queue order follows it."""
+    from outlier_ai.archive.combinations import load_cards_by_id
+
+    trajs = await open_ideas(session)
+    if limit:
+        trajs = trajs[:limit]
+    if not trajs:
+        return 0
+    feats = await _features_for(session, trajs, await load_cards_by_id(session))
+    for t, f in zip(trajs, feats, strict=True):
+        score = await reward_model.score(f)
+        t.rm_score = score.rm_score(cfg.reward_model.lambda_pess)
+        t.rm_version = score.version
+    await session.flush()
+    return len(trajs)

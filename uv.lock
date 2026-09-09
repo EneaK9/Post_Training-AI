@@ -1635,6 +1635,14 @@ dependencies = [
     { name = "outlier-trainer" },
 ]
 
+[package.optional-dependencies]
+llm = [
+    { name = "outlier-ai", extra = ["llm"] },
+]
+train = [
+    { name = "outlier-trainer", extra = ["train"] },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "hypothesis" },
@@ -1649,9 +1657,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "outlier-ai", editable = "packages/backend" },
+    { name = "outlier-ai", extras = ["llm"], marker = "extra == 'llm'", editable = "packages/backend" },
     { name = "outlier-schemas", editable = "packages/schemas" },
     { name = "outlier-trainer", editable = "packages/trainer" },
+    { name = "outlier-trainer", extras = ["train"], marker = "extra == 'train'", editable = "packages/trainer" },
 ]
+provides-extras = ["llm", "train"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1687,6 +1698,7 @@ dependencies = [
     { name = "numpy" },
     { name = "outlier-schemas" },
     { name = "pyarrow" },
+    { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
@@ -1707,6 +1719,7 @@ requires-dist = [
     { name = "outlier-schemas", editable = "packages/schemas" },
     { name = "peft", marker = "extra == 'train'", specifier = ">=0.13" },
     { name = "pyarrow", specifier = ">=17" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "torch", marker = "extra == 'train'", specifier = ">=2.4" },
     { name = "transformers", marker = "extra == 'train'", specifier = ">=4.45" },
     { name = "trl", marker = "extra == 'train'", specifier = ">=1.12" },

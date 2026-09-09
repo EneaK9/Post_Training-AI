@@ -70,6 +70,9 @@ reward_model:
   focal_gamma: 2.0
   gold_gap_threshold: 0.15           # proxy vs real drift that pauses Loop B
   judge_model: claude-sonnet-5
+  min_rows: 50                       # activation guards: below these the cold RM stays in use
+  min_per_class: 10
+  min_val_auc: 0.6                   # held-out AUC a trained ensemble must reach to be activated
 
 rl:
   k: 32

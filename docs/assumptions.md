@@ -100,3 +100,8 @@ of those parts is reconstructed here from the v4 summaries. Every item is tagged
 - **Prompts are stored on the batch** (`batches.prompt_trace.prompt`) so the export ships the
   exact prompt the idea was generated from; older trajectories are re-rendered as of their
   creation time and marked as such.
+- **Trained reward models must earn activation.** A trained ensemble is activated only when the
+  dataset has `reward_model.min_rows` rows and `min_per_class` of each class and the held-out AUC
+  reaches `min_val_auc`; loading re-checks the data guards. Below that the cold reward model (Claude
+  judge, or the heuristic without a key) keeps scoring the queue. Found on the first real batch:
+  a model trained on 43 near-uniform labels scored every new idea at sigmoid(-30).

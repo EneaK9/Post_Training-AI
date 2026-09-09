@@ -71,7 +71,7 @@ async def build_service(
     else:
         verifier = HeuristicVerifier(cards)
     reward_model: RewardModel
-    trained = await load_active_reward_model(session, storage, embedder)
+    trained = await load_active_reward_model(session, storage, embedder, cfg)
     if trained is not None:
         reward_model = trained
     elif judge is not None:

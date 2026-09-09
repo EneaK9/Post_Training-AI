@@ -92,15 +92,33 @@ async def test_train_reward_model_and_load(
     await _seeded(db_session, app_config)
     storage = LocalStorage(tmp_path)
     embedder = HashEmbedder(app_config.archive.embedding_dims)
-    res = await train_reward_model(db_session, cfg=app_config, embedder=embedder, storage=storage)
+    # seeded expert labels carry no learnable signal: either the data guard refuses to train, or
+    # the held-out AUC guard refuses to activate; in both cases the cold reward model stays in use
+    strict = await train_reward_model(
+        db_session, cfg=app_config, embedder=embedder, storage=storage
+    )
+    assert strict is None or (not strict.activated and strict.note)
+    assert await load_active_reward_model(db_session, storage, embedder, app_config) is None
+    relaxed = app_config.model_copy(
+        update={
+            "reward_model": app_config.reward_model.model_copy(
+                update={"min_rows": 20, "min_per_class": 3, "min_val_auc": 0.5}
+            )
+        }
+    )
+    res = await train_reward_model(
+        db_session, cfg=relaxed, embedder=embedder, storage=storage, force=True
+    )
     await db_session.commit()
     assert res is not None and res.n_rows >= 20 and res.n_positive >= 3
     assert res.calibration.expected_calibration_error is not None
+    assert res.activated  # forced: the note still records the guard verdict
+    assert res.val_auc is not None
     active = (
         await db_session.execute(select(RewardModelVersion).where(RewardModelVersion.is_active))
     ).scalar_one()
     assert active.version == res.version and active.artifact_uri
-    rm = await load_active_reward_model(db_session, storage, embedder)
+    rm = await load_active_reward_model(db_session, storage, embedder, relaxed)
     assert rm is not None and rm.version == res.version
     from outlier_ai.reward.base import IdeaFeatures
 
@@ -314,7 +332,8 @@ async def test_training_eval_feedback_api(
     rv = await researcher.post("/api/feedback/retrain_verifier")
     assert rv.status_code == 200 and rv.json()["count"] == 0 and rv.json()["reason"]
     rm = await researcher.post("/api/feedback/retrain_rm", json={})
-    assert rm.status_code == 200 and rm.json()["trained"] is True
+    assert rm.status_code == 200 and rm.json()["trained"] is False
+    assert "cold reward model stays" in rm.json()["reason"]
     gg = await researcher.get("/api/stats/gold_gap")
     assert gg.status_code == 200 and "tripped" in gg.json()
     stats = await researcher.get("/api/stats/reward_model")

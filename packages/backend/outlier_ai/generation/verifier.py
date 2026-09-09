@@ -113,7 +113,7 @@ class HeuristicVerifier:
 
 
 class LLMVerifier:
-    version = "verifier-llm-v1"
+    version = "verifier-llm-v2"
 
     def __init__(
         self, judge: JudgeBackend, cards: Sequence[CardRef], few_shot: Sequence[FewShot] = ()
@@ -121,14 +121,22 @@ class LLMVerifier:
         self.judge = judge
         self.cards = list(cards)
         self.few_shot = list(few_shot)
-        self.version = f"verifier-llm-v1:{judge.model}"
+        self.version = f"verifier-llm-v2:{judge.model}"
 
     def _system(self) -> str:
         lines = [
             "You tag advertising ideas with the playbook cards they actually execute.",
             "Read only the angle, copy, and visual brief. Ignore any stated intent.",
-            'Return JSON only: {"cards": ["slug", ...]} using slugs from this list. '
-            "Tag every card the execution clearly uses, usually 2 to 4. Do not invent slugs.",
+            'Return JSON only: {"cards": ["slug", ...]} using slugs from this list, most central '
+            "first. Do not invent slugs.",
+            "Tag only the cards that ORGANIZE the execution: the strategy the ad is built on, the "
+            "style it is rendered in, and any principle or mechanic that structures the copy or "
+            "the offer. Return 2 to 4 slugs.",
+            "Incidental features are not cards: a number in the copy is not specific-numbers "
+            "unless the claims are number-led throughout; the brief's offer line is not "
+            "bundle-offer unless the bundle framing is the ad's offer; mentioning a competitor "
+            "or category in passing is not name-the-enemy unless the ad is built against it; "
+            "a single demonstrative sentence is not show-dont-tell. When in doubt, leave it out.",
             "",
             "Playbook:",
         ]
