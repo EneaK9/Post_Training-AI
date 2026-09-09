@@ -79,6 +79,7 @@ jobs:
     env:
       UV_PROJECT_ENVIRONMENT: venv
       DATABASE_URL: postgresql+asyncpg://outlier:outlier@127.0.0.1:5433/outlier
+      E2E_DATABASE_URL: postgresql+asyncpg://outlier:outlier@127.0.0.1:5433/outlier
       DRY_RUN: "true"
       STORAGE_BACKEND: local
       PII_HMAC_KEY: ci-only

@@ -1561,6 +1561,7 @@ version = "0.1.0"
 source = { editable = "packages/backend" }
 dependencies = [
     { name = "alembic" },
+    { name = "anthropic" },
     { name = "argon2-cffi" },
     { name = "asyncpg" },
     { name = "boto3" },
@@ -1583,9 +1584,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-llm = [
-    { name = "anthropic" },
-]
 meta = [
     { name = "facebook-business" },
 ]
@@ -1599,7 +1597,7 @@ signals = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
-    { name = "anthropic", marker = "extra == 'llm'", specifier = ">=1.0" },
+    { name = "anthropic", specifier = ">=1.0" },
     { name = "argon2-cffi", specifier = ">=23" },
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "boto3", specifier = ">=1.35" },
@@ -1637,7 +1635,7 @@ dependencies = [
 
 [package.optional-dependencies]
 llm = [
-    { name = "outlier-ai", extra = ["llm"] },
+    { name = "outlier-ai" },
 ]
 train = [
     { name = "outlier-trainer", extra = ["train"] },

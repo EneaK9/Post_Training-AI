@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # hash: deterministic feature hashing (tests, dev). sentence_transformers needs the `ml` extra.
     embedder: Literal["hash", "sentence_transformers"] = "hash"
 
+    # Self-service account creation on /signup. Turn off in production (see runbook).
+    signup_enabled: bool = True
     storage_backend: Literal["local", "s3"] = "local"
     local_storage_dir: Path = Path(".storage")
     s3_endpoint: str | None = None

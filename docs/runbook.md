@@ -8,7 +8,7 @@ make up && make migrate && make seed
 make api          # :8000       make web   # :3000
 make test         # unit + integration (Postgres on 127.0.0.1:5433)
 make test-slow    # simulator experiments (minutes)
-make e2e          # Playwright on a fresh API :8100 + Next :3100
+make e2e          # Playwright on its own outlier_e2e database (never the dev DB), API :8100 + Next :3100
 ```
 
 Seeded users: `operator@example.com`, `researcher@example.com`, `expert@example.com`. Set passwords
@@ -28,7 +28,25 @@ uv run oai jobs run sync_insights | sync_comments | episode_tick | recompute_out
 uv run oai jobs worker                                      # long-running cadence
 ```
 
+## Neon (cloud Postgres)
+
+Neon's connection string uses libpq parameters (`sslmode=require&channel_binding=require`) that
+asyncpg does not accept. Rewrite it as `postgresql+asyncpg://USER:PASSWORD@HOST/neondb?ssl=require`.
+
+- `DATABASE_URL`: the `-pooler` host. The engine already sets `statement_cache_size=0`, which
+  pgbouncer's transaction mode requires.
+- `ALEMBIC_DATABASE_URL`: the direct host (same name without `-pooler`) for `alembic upgrade head`
+  and other long sessions.
+- `TEST_DATABASE_URL` stays on the local Docker Postgres: the test suite drops and recreates every
+  table.
+- pgvector 0.8.x and pg_trgm are available on Neon; Alembic creates both extensions.
+- Turn scale-to-zero off for the production branch so the worker's daily cadence does not hit a
+  cold start, and rotate the password if the connection string was ever pasted anywhere.
+
 ## Connecting a real Meta account (do not skip steps)
+
+Before any of this: set `SIGNUP_ENABLED=false` so accounts on a deployment that can spend money are
+created by an operator (`oai users create`) rather than by anyone who finds the sign-up page.
 
 The Graph API version is pinned in `config.meta.api_version` (currently `v26.0`). Bumping it is a
 deliberate change: run `pytest -m contract` against the sandbox first (`tests/contract/`).

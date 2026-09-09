@@ -27,7 +27,7 @@ make seed             # synthetic dataset
 make test
 make api             # FastAPI on :8000
 make web             # Next.js on :3000 (proxies /api to :8000)
-make e2e             # Playwright against a fresh stack on :8100/:3100
+make e2e             # Playwright on its own outlier_e2e database, API :8100 + Next :3100
 ```
 
 Seeded users are `operator@example.com`, `researcher@example.com`, `expert@example.com`; set a
@@ -62,7 +62,7 @@ Trainer stages (`packages/trainer/outlier_trainer`): `rft` (SFT on tier 2+), `dp
 on the same brief), `grpo_offpolicy` (custom loop over archived completions with the section 7.3
 advantage transform, clipped sequence ratios, KL to a reference refreshed only at run boundaries),
 `grpo_onpolicy` (TRL `GRPOTrainer` subclass; RM-shaped reward, so it only runs with `--simulator` or
-`--allow-rm-reward`). Install GPU dependencies with `uv sync --all-packages --extra train`; the Anthropic SDK with `--extra llm`.
+`--allow-rm-reward`). Install GPU dependencies with `uv sync --all-packages --extra train`. The Anthropic SDK is a regular dependency.
 The Model screen exposes the same actions to researchers: Launch run (dry / smoke / full), Run eval,
 Train reward model, plus the gold-gap badge.
 
@@ -86,3 +86,9 @@ conditions on holds one or two outliers across four briefs and carries almost no
 in order: seed more outlier-dense history (or a heavier-tailed latent), give the fake archive
 policy the niche projection the latent actually rewards, and raise the per-run budget so more
 than ~8 ideas ship. Do not treat the gate as passed until the intervals separate.
+
+## Accounts
+
+Sign in at `/login`, or create an account at `/signup` (role chosen on the form; `SIGNUP_ENABLED=false`
+turns the page off). From the CLI: `oai users create --email ... --password ... --role expert` and
+`oai users set-password`.

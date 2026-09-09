@@ -4,6 +4,46 @@
  */
 
 export interface paths {
+    "/api/auth/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Options
+         * @description What the login and sign-up pages may offer. No auth: it is read before anyone is signed in.
+         */
+        get: operations["options_api_auth_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signup
+         * @description Self-service account creation, then signed in. Disabled with SIGNUP_ENABLED=false.
+         */
+        post: operations["signup_api_auth_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -1396,6 +1436,13 @@ export interface components {
              */
             at: string;
         };
+        /** AuthOptionsOut */
+        AuthOptionsOut: {
+            /** Signup Enabled */
+            signup_enabled: boolean;
+            /** Roles */
+            roles: string[];
+        };
         /**
          * BackendKind
          * @enum {string}
@@ -2431,6 +2478,11 @@ export interface components {
              */
             reviewed_at: string;
         };
+        /**
+         * Role
+         * @enum {string}
+         */
+        Role: "operator" | "researcher" | "expert";
         /** ScreeningOut */
         ScreeningOut: {
             /** Impressions */
@@ -2550,6 +2602,20 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** SignupIn */
+        SignupIn: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+            /**
+             * Display Name
+             * @default
+             */
+            display_name?: string;
+            /** @default expert */
+            role?: components["schemas"]["Role"];
         };
         /** TrainingRunIn */
         TrainingRunIn: {
@@ -2828,6 +2894,59 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    options_api_auth_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthOptionsOut"];
+                };
+            };
+        };
+    };
+    signup_api_auth_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_auth_login_post: {
         parameters: {
             query?: never;

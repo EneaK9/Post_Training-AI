@@ -372,10 +372,16 @@ def serve(
     port: int = typer.Option(8000),
     reload: bool = typer.Option(False, help="auto-reload on code changes"),
 ) -> None:
-    """Run the API with uvicorn."""
+    """Run the API with uvicorn. With --reload, a changed `.env` restarts the server too."""
     import uvicorn
 
-    uvicorn.run("outlier_ai.api.app:app", host=host, port=port, reload=reload)
+    uvicorn.run(
+        "outlier_ai.api.app:app",
+        host=host,
+        port=port,
+        reload=reload,
+        reload_includes=["*.py", ".env"] if reload else None,
+    )
 
 
 @app.command("openapi")

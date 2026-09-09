@@ -59,7 +59,7 @@ Three things needed fixing and are fixed:
   execution, 2 to 4 of them; mean Jaccard against the written cards went from 0.47 to 0.54 on the
   same 8 ideas. Mismatch remains a signal for experts, not an error.
 - **Claude invented social proof** ("41,000 kits shipped"). The pre-ship screen caught it, and
-  the prompt now forbids figures not in the brief or history (write `[number]` instead).
+  the prompt now forbids figures not in the brief or history. A first version of that rule made Claude scatter `[number]` placeholders, nine in one idea and some in headlines; the rule now allows at most one placeholder per idea, never in the headline, and asks for claims that need no figure.
 
 Next reads: run 3 to 5 more batches on different briefs and read them on the Generate screen with
 "What the model saw" open. Watch whether the invented-figure rule holds, how often the pre-ship

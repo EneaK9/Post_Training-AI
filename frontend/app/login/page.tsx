@@ -44,6 +44,7 @@ function LoginForm() {
         <Field label="Password"><Input name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Field>
         <ErrorNote error={error} />
         <Button type="submit" variant="primary" disabled={busy} className="w-full justify-center">Sign in</Button>
+        <p className="text-center text-xs text-muted">New here? <a className="underline" href="/signup" data-testid="signup-link">Create an account</a></p>
       </form>
     </main>
   );

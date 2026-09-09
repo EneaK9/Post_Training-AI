@@ -5,6 +5,70 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/auth/options": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Options",
+        "description": "What the login and sign-up pages may offer. No auth: it is read before anyone is signed in.",
+        "operationId": "options_api_auth_options_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthOptionsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signup",
+        "description": "Self-service account creation, then signed in. Disabled with SIGNUP_ENABLED=false.",
+        "operationId": "signup_api_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/login": {
       "post": {
         "tags": [
@@ -4297,6 +4361,27 @@
         ],
         "title": "AuditOut"
       },
+      "AuthOptionsOut": {
+        "properties": {
+          "signup_enabled": {
+            "type": "boolean",
+            "title": "Signup Enabled"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signup_enabled",
+          "roles"
+        ],
+        "title": "AuthOptionsOut"
+      },
       "BackendKind": {
         "type": "string",
         "enum": [
@@ -6939,6 +7024,15 @@
         ],
         "title": "ReviewOut"
       },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "operator",
+          "researcher",
+          "expert"
+        ],
+        "title": "Role"
+      },
       "ScreeningOut": {
         "properties": {
           "impressions": {
@@ -7222,6 +7316,39 @@
           "created_at"
         ],
         "title": "SignalOut"
+      },
+      "SignupIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "display_name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Display Name",
+            "default": ""
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "default": "expert"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "SignupIn"
       },
       "TrainingRunIn": {
         "properties": {

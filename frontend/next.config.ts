@@ -5,6 +5,8 @@ import type { NextConfig } from "next";
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  // Playwright sets NEXT_DIST_DIR so its dev server can run beside yours (Next locks .next/dev).
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${API_URL}/api/:path*` }];
   },

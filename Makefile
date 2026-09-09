@@ -6,6 +6,9 @@ SHELL := /bin/bash
 # silently breaks editable installs of the workspace packages. Set the same variable in your
 # shell to use plain `uv run` outside make:  export UV_PROJECT_ENVIRONMENT=venv
 export UV_PROJECT_ENVIRONMENT ?= venv
+# Override when :8000 / :3000 are busy: `make api API_PORT=8100` and `make web API_PORT=8100 WEB_PORT=3100`
+API_PORT ?= 8000
+WEB_PORT ?= 3000
 
 COMPOSE := docker compose -f infra/docker-compose.yml
 
@@ -56,14 +59,14 @@ test-unit: ## Unit tests only
 test-slow: ## Simulator experiments and trainer smoke
 	uv run pytest -m slow -q
 
-web: ## Run the Next.js dev server on :3000 (API on :8000)
-	cd frontend && pnpm dev
+web: ## Run the Next.js dev server on WEB_PORT, proxying /api to the API on API_PORT
+	cd frontend && API_URL=http://127.0.0.1:$(API_PORT) pnpm dev --port $(WEB_PORT)
 
-e2e: ## Seed the dev database and run Playwright against a fresh API + Next on :8100/:3100
+e2e: ## Playwright against its own outlier_e2e database and a fresh API + Next on :8100/:3100
 	cd frontend && pnpm e2e
 
-api: ## Run the API on 127.0.0.1:8000 with reload
-	uv run oai serve --reload
+api: ## Run the API on 127.0.0.1:API_PORT with reload
+	uv run oai serve --reload --port $(API_PORT)
 
 openapi: ## Export OpenAPI schema for the frontend
 	uv run oai openapi

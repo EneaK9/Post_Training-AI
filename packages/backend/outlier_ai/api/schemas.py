@@ -13,6 +13,7 @@ from outlier_schemas.enums import (
     CardKind,
     RelationKind,
     ReviewLabel,
+    Role,
     Sentiment,
     SignalKind,
 )
@@ -43,6 +44,18 @@ class Out(Resp):
 class LoginIn(BaseModel):
     email: str
     password: str
+
+
+class SignupIn(BaseModel):
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(default="", max_length=120)
+    role: Role = Role.expert
+
+
+class AuthOptionsOut(Resp):
+    signup_enabled: bool
+    roles: list[str]
 
 
 class UserOut(Out):

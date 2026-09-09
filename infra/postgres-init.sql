@@ -2,11 +2,16 @@
 -- in both databases. Alembic also issues CREATE EXTENSION IF NOT EXISTS, so this is a
 -- convenience for local development.
 CREATE DATABASE outlier_test OWNER outlier;
+CREATE DATABASE outlier_e2e OWNER outlier;   -- Playwright seeds and wipes this one, never `outlier`
 
 \connect outlier
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 \connect outlier_test
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+\connect outlier_e2e
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
